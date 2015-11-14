@@ -1,11 +1,12 @@
 /* Copyright (c) 2015, Section 6. All Rights Reserved. */
 
-#include <asoundlib.h> // alsa
-#include <arpa/inet.h> // network
-#include <pthread.h>   // threads
+#include <asoundlib.h>  // alsa
+#include <arpa/inet.h>  // network
+#include <pthread.h>    // threads
 #include <stdatomic.h>
-#include <time.h>      // nanosleep, clock_gettime
-#include "tinyosc.h"   // OSC support
+#include <sys/socket.h> // sockets
+#include <time.h>       // nanosleep, clock_gettime
+#include "tinyosc.h"    // OSC support
 
 #define BLOCK_SIZE 256
 #define NUM_OUTPUT_CHANNELS 2
@@ -65,16 +66,22 @@ static void *network_run(void *x) {
   tosc_tinyosc osc;
   char buffer[2048];
 
-  while (_keepRunning) {
-    // TODO(mhroth): read from socket
-    // TODO(mhroth): process osc messages and send them into the heavy contexts
+  // prepare the receive socket
+  const int fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
+  // fcntl(fd, F_SETFL, O_NONBLOCK); // set the socket to non-blocking
+  sin.sin_family = AF_INET;
+  sin.sin_port = htons(2015);
+  sin.sin_addr.s_addr = INADDR_ANY;
+  bind(fd, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
 
+  while (_keepRunning) {
+    // set up structs for select
     fd_set rfds;
     FD_ZERO(&rfds);
-    FD_SET(fd, &rfds);
+    FD_SET(fd_receive, &rfds);
 
     struct timeval tv;
-    tv.tv_sec = 1;
+    tv.tv_sec = 1; // wait up to 1 second
     tv.tv_usec = 0;
 
     // listen to the socket for any responses
