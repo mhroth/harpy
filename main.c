@@ -6,12 +6,15 @@
 #include <stdatomic.h>
 #include <sys/socket.h>      // sockets
 #include <time.h>            // nanosleep, clock_gettime
-#include "tinyosc/tinyosc.h" // OSC support
 #include <stdio.h>
 #include <sys/time.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>          // close
+
+#include "tinyosc/tinyosc.h" // OSC support
+
+// heavy slots
 #include "heavy/mixer/Heavy_mixer.h"
 
 #define SAMPLE_RATE 48000
@@ -162,11 +165,11 @@ int main() {
       500000);     // required overall latency in us
 
   // initialise all heavy slots
-  void *heavySlot0 = hv_firehelix_new_with_pool(SAMPLE_RATE, 100);
-  hv_setPrintHook(heavySlot0, &hv_printHook);
-  hv_setSendHook(heavySlot0, &hv_sendHook);
+  m.mods[0] = hv_bass_new(SAMPLE_RATE);
+  hv_setPrintHook(m.mods[0], &hv_printHook);
+  hv_setSendHook(m.mods[0], &hv_sendHook);
 
-  Hv_mixer *hv_mixer = hv_mixer_new_with_pool(SAMPLE_RATE, 10);
+  Hv_mixer *hv_mixer = hv_mixer_new(SAMPLE_RATE);
   hv_setPrintHook(hv_mixer, &hv_printHook);
   hv_setSendHook(hv_mixer, &hv_sendHook);
 
@@ -176,24 +179,26 @@ int main() {
   pthread_create(&networkThread, NULL, &network_run, &m);
 
   // the audio loop
-  float audioBuffer[NUM_OUTPUT_CHANNELS * BLOCK_SIZE];
+  float audioBuffer[4 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE];
   while (_keepRunning) {
+    // process Heavy
     pthread_mutex_lock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tick);
-    // TODO(mhroth): process Heavy
-    hv_heavy_process_inline(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
-    hv_heavy_process_inline(m.mods[1], NULL, audioBuffer, BLOCK_SIZE);
-    hv_heavy_process_inline(m.mods[2], NULL, audioBuffer, BLOCK_SIZE);
-    hv_heavy_process_inline(m.mods[3], NULL, audioBuffer, BLOCK_SIZE);
+    hv_bass_process_inline(m.mods[0], NULL, audioBuffer+(0 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
-    hv_mixer_process_inline(hv_mixer, XXX, XXX, BLOCK_SIZE);
+    hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
     clock_gettime(CLOCK_REALTIME, &tock);
     timespec_subtract(&diff_tick, &tock, &tick);
     const int64_t elapsed_ns = (((int64_t) diff_tick.tv_sec) * SEC_TO_NS) + diff_tick.tv_nsec;
 
-    snd_pcm_sframes_t frames = snd_pcm_writen(alsa, audioBuffer, sizeof(audioBuffer));
-    if (frames < 0) frames = snd_pcm_recover(handle, audioBuffer, 0);
-    if (frames < 0) printf("ALSA: snd_pcm_writen failed: %s\n", snd_strerror(frames));
+    snd_pcm_sframes_t frames = snd_pcm_writen(alsa, audioBuffer, NUM_OUTPUT_CHANNELS*BLOCK_SIZE*sizeof(float));
+    if (frames < 0) {
+      frames = snd_pcm_recover(handle, audioBuffer, 0);
+      if (frames < 0) printf("ALSA: snd_pcm_writen failed: %s\n", snd_strerror(frames));
+    }
   }
 
   // wait until the network thread has quit
@@ -205,8 +210,9 @@ int main() {
   // shut down the audio
   snd_pcm_close(alsa);
 
-  // free all of the slots
-  hv_firehelix_free(heavySlot0);
+  // free heavy slots
+  hv_bass_free(m.mods[0]);
+  hv_mixer_free(hv_mixer);
 
   return 0;
 }
