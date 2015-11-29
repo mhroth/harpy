@@ -1,25 +1,29 @@
-/* Copyright (c) 2015, Section 6. All Rights Reserved. */
+/* Copyright (c) 2015, Martin Roth (mhroth@gmail.com). All Rights Reserved. */
 
-#include <asoundlib.h>  // alsa
-#include <arpa/inet.h>  // network
-#include <pthread.h>    // threads
+#include <asoundlib.h>       // alsa
+#include <arpa/inet.h>       // network
+#include <pthread.h>         // threads
 #include <stdatomic.h>
-#include <sys/socket.h> // sockets
-#include <time.h>       // nanosleep, clock_gettime
-#include "tinyosc.h"    // OSC support
+#include <sys/socket.h>      // sockets
+#include <time.h>            // nanosleep, clock_gettime
+#include "tinyosc/tinyosc.h" // OSC support
+#include <stdio.h>
+#include <sys/time.h>
+#include <signal.h>
+#include <string.h>
+#include <unistd.h>          // close
+#include "heavy/mixer/Heavy_mixer.h"
 
+#define SAMPLE_RATE 48000
 #define BLOCK_SIZE 256
 #define NUM_OUTPUT_CHANNELS 2
 #define SEC_TO_NS 1000000000
-
-static atomic_flag networkThreadShouldContinue;
 
 static volatile bool _keepRunning = true;
 
 // http://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
 static void sigintHandler(int x) {
-  printf("Termination signal received.\n"); // handle Ctrl+C
-  _keepRunning = false;
+  _keepRunning = false; // handle Ctrl+C
 }
 
 static void timespec_subtract(struct timespec *result, struct timespec *end, struct timespec *start) {
@@ -32,8 +36,8 @@ static void timespec_subtract(struct timespec *result, struct timespec *end, str
   }
 }
 
-static void hv_printHook(double timestamp, const char *name, const char *s,
-    void *userData) {
+static void hv_printHook(
+    double timestamp, const char *name, const char *s, void *userData) {
   printf("[@h %.3fms] %s: %s\n", timestamp, name, s);
 }
 
@@ -42,12 +46,34 @@ static void hv_sendHook(double timestamp, const char *receiverName,
   // TODO(mhroth)
 }
 
-static void handleOscMessage(tosc_message *osc, const uint64_t timetag) {
+static void getEn0Ip(char *host) {
+  struct ifaddrs *ifaddr = NULL;
+  getifaddrs(&ifaddr);
+  for (struct ifaddrs *ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+    if (!strcmp(ifa->ifa_name, "en0")) {
+      if (ifa->ifa_addr->sa_family == AF_INET) {
+        struct sockaddr_in *sa = (struct sockaddr_in *) ifa->ifa_addr;
+        inet_ntop(AF_INET, &(sa->sin_addr), host, INET_ADDRSTRLEN);
+        break;
+      }
+    }
+  }
+  freeifaddrs(ifaddr);
+}
+
+typedef struct Modules {
+  void *mods[4];
+  pthread_mutex_t lock;
+} Modules;
+
+static void handleOscMessage(
+    tosc_message *osc, const uint64_t timetag, Modules *m) {
   if (!strncmp(tosc_getAddress(osc), "/slot", 5)) {
     // address looks like "/slot/0/gain"
     const int i = tosc_getAddress(osc)[6] - '0';
     pthread_mutex_lock(m->lock);
-    hv_vscheduleMessageForReceiver(m->mods[i], tosc_getAddress(osc)+8, 0.0,
+    hv_vscheduleMessageForReceiver(m->mods[i],
+        tosc_getAddress(osc)+8, 0.0,
         "f", tosc_getNextFloat(osc));
     pthread_mutex_unlock(m->lock);
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
@@ -57,22 +83,29 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag) {
   }
 }
 
+// the network thread
 static void *network_run(void *x) {
   Modules *m = (Modules *) x;
 
   struct sockaddr_in sin;
   int len = 0;
   int sa_len = sizeof(struct sockaddr_in);
-  tosc_tinyosc osc;
   char buffer[2048];
 
   // prepare the receive socket
   const int fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
-  // fcntl(fd, F_SETFL, O_NONBLOCK); // set the socket to non-blocking
   sin.sin_family = AF_INET;
-  sin.sin_port = htons(2015);
+  sin.sin_port = htons(9000);
   sin.sin_addr.s_addr = INADDR_ANY;
-  bind(fd, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
+  bind(fd_receive, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
+  {
+    char host[INET_ADDRSTRLEN];
+    getEn0Ip(host);
+    printf("r.pistorius listening on osc://%s:9000\n", host);
+  }
+
+  tosc_bundle bundle;
+  tosc_message osc;
 
   while (_keepRunning) {
     // set up structs for select
@@ -88,54 +121,56 @@ static void *network_run(void *x) {
     if (select(1, &rfds, NULL, NULL, &tv) > 0) {
       while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
         if (tosc_isBundle(buffer)) {
-          tosc_bundle bundle;
           tosc_readBundle(&bundle, buffer, len);
           const uint64_t timetag = tosc_getTimetag(&bundle);
-          tosc_message osc;
           while (tosc_getNextMessage(&bundle, &osc)) {
-            handleOscMessage(&osc, timetag);
+            handleOscMessage(&osc, timetag, m);
           }
         } else {
-          tosc_message osc;
           tosc_readMessage(&osc, buffer, len);
-          handleOscMessage(&osc, 0L);
+          handleOscMessage(&osc, 0L, m);
         }
       }
     }
   }
 
+  // close the OSC socket
+  close(fd_receive);
+
   return NULL;
 }
-
-typedef struct Modules {
-  void *mods[4];
-  pthread_mutex_t lock;
-} Modules;
 
 // http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_min_8c-example.html
 int main() {
   signal(SIGINT, &sigintHandler); // register the SIGINT handler
 
+  // create the modules (and initialise the lock)
   Modules m;
   pthread_mutex_t(&m.lock, NULL);
 
   struct timespec tick, tock, diff_tick;
 
-  // setup sound output
+  setup sound output
   snd_pcm_t *alsa;
-  snd_pcm_open(&alsa, "RPistorius", SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC);
+  snd_pcm_open(&alsa, "r.pistorius", SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC);
   snd_pcm_set_params(alsa,
       SND_PCM_FORMAT_FLOAT_LE ,
       SND_PCM_ACCESS_RW_NONINTERLEAVED,
       NUM_OUTPUT_CHANNELS, // stereo output
-      48000,   // 48KHz sampling rate
-      1,       // 0 = disallow alsa-lib resample stream, 1 = allow resampling
-      500000); // required overall latency in us
+      SAMPLE_RATE, // 48KHz sampling rate
+      1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
+      500000);     // required overall latency in us
 
-  void *heavySlot0 = hv_firehelix_new_with_pool(HEAVY_SAMPLE_RATE, 100);
+  // initialise all heavy slots
+  void *heavySlot0 = hv_firehelix_new_with_pool(SAMPLE_RATE, 100);
   hv_setPrintHook(heavySlot0, &hv_printHook);
   hv_setSendHook(heavySlot0, &hv_sendHook);
 
+  Hv_mixer *hv_mixer = hv_mixer_new_with_pool(SAMPLE_RATE, 10);
+  hv_setPrintHook(hv_mixer, &hv_printHook);
+  hv_setSendHook(hv_mixer, &hv_sendHook);
+
+  // create and start the network thread
   // https://computing.llnl.gov/tutorials/pthreads/
   pthread_t networkThread = 0;
   pthread_create(&networkThread, NULL, &network_run, &m);
@@ -150,8 +185,9 @@ int main() {
     hv_heavy_process_inline(m.mods[1], NULL, audioBuffer, BLOCK_SIZE);
     hv_heavy_process_inline(m.mods[2], NULL, audioBuffer, BLOCK_SIZE);
     hv_heavy_process_inline(m.mods[3], NULL, audioBuffer, BLOCK_SIZE);
-    clock_gettime(CLOCK_REALTIME, &tock);
     pthread_mutex_unlock(&m.lock);
+    hv_mixer_process_inline(hv_mixer, XXX, XXX, BLOCK_SIZE);
+    clock_gettime(CLOCK_REALTIME, &tock);
     timespec_subtract(&diff_tick, &tock, &tick);
     const int64_t elapsed_ns = (((int64_t) diff_tick.tv_sec) * SEC_TO_NS) + diff_tick.tv_nsec;
 
@@ -163,6 +199,7 @@ int main() {
   // wait until the network thread has quit
   pthread_join(networkThread, NULL);
 
+  // destroy the lock
   pthread_mutex_destroy(&m.lock);
 
   // shut down the audio
@@ -170,5 +207,6 @@ int main() {
 
   // free all of the slots
   hv_firehelix_free(heavySlot0);
+
   return 0;
 }
