@@ -97,6 +97,7 @@ static void *network_run(void *x) {
 
   // prepare the receive socket
   const int fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
+  assert(fd_receive > 0);
   sin.sin_family = AF_INET;
   sin.sin_port = htons(9000);
   sin.sin_addr.s_addr = INADDR_ANY;
@@ -121,7 +122,7 @@ static void *network_run(void *x) {
     tv.tv_usec = 0;
 
     // listen to the socket for any responses
-    if (select(1, &rfds, NULL, NULL, &tv) > 0) {
+    if (select(fd_receive+1, &rfds, NULL, NULL, &tv) > 0) {
       while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
         if (tosc_isBundle(buffer)) {
           tosc_readBundle(&bundle, buffer, len);
@@ -130,6 +131,9 @@ static void *network_run(void *x) {
             handleOscMessage(&osc, timetag, m);
           }
         } else {
+#if !NDEBUG
+          tosc_printOscBuffer(buffer, len);
+#endif
           tosc_readMessage(&osc, buffer, len);
           handleOscMessage(&osc, 0L, m);
         }
@@ -168,10 +172,12 @@ int main() {
   m.mods[0] = hv_bass_new(SAMPLE_RATE);
   hv_setPrintHook(m.mods[0], &hv_printHook);
   hv_setSendHook(m.mods[0], &hv_sendHook);
+  assert(hv_getNumOutputChannels(m.mods[0]) == NUM_OUTPUT_CHANNELS);
 
   Hv_mixer *hv_mixer = hv_mixer_new(SAMPLE_RATE);
   hv_setPrintHook(hv_mixer, &hv_printHook);
   hv_setSendHook(hv_mixer, &hv_sendHook);
+  assert(hv_getNumOutputChannels(hv_mixer) == NUM_OUTPUT_CHANNELS);
 
   // create and start the network thread
   // https://computing.llnl.gov/tutorials/pthreads/
@@ -193,8 +199,14 @@ int main() {
     clock_gettime(CLOCK_REALTIME, &tock);
     timespec_subtract(&diff_tick, &tock, &tick);
     const int64_t elapsed_ns = (((int64_t) diff_tick.tv_sec) * SEC_TO_NS) + diff_tick.tv_nsec;
+#if !NDEBUG
+    printf("%lli\nns (%0.3f %%CPU)\n",
+        elapsed_ns,
+        100.0*elapsed_ns/(SEC_TO_NS*BLOCK_SIZE/((double) SAMPLE_RATE)));
+#endif
 
-    snd_pcm_sframes_t frames = snd_pcm_writen(alsa, audioBuffer, NUM_OUTPUT_CHANNELS*BLOCK_SIZE*sizeof(float));
+    snd_pcm_sframes_t frames = snd_pcm_writen(
+        alsa, audioBuffer, NUM_OUTPUT_CHANNELS*BLOCK_SIZE*sizeof(float));
     if (frames < 0) {
       frames = snd_pcm_recover(handle, audioBuffer, 0);
       if (frames < 0) printf("ALSA: snd_pcm_writen failed: %s\n", snd_strerror(frames));
