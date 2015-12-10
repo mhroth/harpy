@@ -77,6 +77,7 @@ static void handleOscMessage(
     // address looks like "/slot/0/gain"
     const int i = tosc_getAddress(osc)[6] - '0';
     pthread_mutex_lock(&m->lock);
+    // hv_sendFloatToReceiver(m->mods[i], tosc_getAddress(osc)+8, tosc_getNextFloat(osc));
     hv_vscheduleMessageForReceiver(m->mods[i],
         tosc_getAddress(osc)+8, 0.0,
         "f", tosc_getNextFloat(osc));
@@ -153,7 +154,7 @@ int main() {
   Modules m;
   pthread_mutex_init(&m.lock, NULL);
 
-  struct timespec tick, tock, diff_tick;
+  struct timespec tick, tock;
 
   // setup sound output
   // list all devices: $ aplay -L
@@ -188,10 +189,12 @@ int main() {
     (float *) alloca(BLOCK_SIZE*sizeof(float)),
     (float *) alloca(BLOCK_SIZE*sizeof(float))
   };
+  memset(audioBuffer[0], 0, BLOCK_SIZE*sizeof(float));
+  memset(audioBuffer[1], 0, BLOCK_SIZE*sizeof(float));
   while (_keepRunning) {
     // process Heavy
-    pthread_mutex_lock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tick);
+    pthread_mutex_lock(&m.lock);
     // hv_bass_process_inline(m.mods[0], NULL, audioBuffer+(0 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
@@ -199,21 +202,20 @@ int main() {
     pthread_mutex_unlock(&m.lock);
     // hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
     clock_gettime(CLOCK_REALTIME, &tock);
-    timespec_subtract(&diff_tick, &tock, &tick);
-    const int64_t elapsed_ns = (((int64_t) diff_tick.tv_sec) * SEC_TO_NS) + diff_tick.tv_nsec;
 #if !NDEBUG
-    printf("%llins (%0.3f %%CPU)\n",
+    struct timespec diff_tock;
+    timespec_subtract(&diff_tock, &tock, &tick);
+    const int64_t elapsed_ns = (((int64_t) diff_tock.tv_sec) * SEC_TO_NS) + diff_tock.tv_nsec;
+    printf("%llins (%0.3f%%CPU)\n",
         elapsed_ns,
         100.0*elapsed_ns/((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE));
-#endif
-/*
-    snd_pcm_sframes_t frames = snd_pcm_writen(
-        alsa, (void **) audioBuffer, NUM_OUTPUT_CHANNELS*BLOCK_SIZE*sizeof(float));
+#endif // perf debug
+
+    snd_pcm_sframes_t frames = snd_pcm_writen(alsa, (void **) audioBuffer, BLOCK_SIZE);
     if (frames < 0) {
       frames = snd_pcm_recover(alsa, frames, 0);
       if (frames < 0) printf("ALSA: snd_pcm_writen failed: %s\n", snd_strerror(frames));
     }
-*/
   }
 
   // wait until the network thread has quit
