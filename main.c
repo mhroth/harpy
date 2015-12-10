@@ -79,15 +79,15 @@ static void handleOscMessage(
     // address looks like "/slot/0/gain"
     const int i = tosc_getAddress(osc)[6] - '0';
     pthread_mutex_lock(&m->lock);
-    // hv_sendFloatToReceiver(m->mods[i], tosc_getAddress(osc)+8, tosc_getNextFloat(osc));
-    hv_vscheduleMessageForReceiver(m->mods[i],
-        tosc_getAddress(osc)+8, 0.0,
-        "f", tosc_getNextFloat(osc));
+    hv_sendFloatToReceiver(m->mods[i], tosc_getAddress(osc)+8, tosc_getNextFloat(osc));
     pthread_mutex_unlock(&m->lock);
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
     if (!strcmp(tosc_getNextString(osc), "quit")) {
-      _keepRunning = false;
+      sigintHandler(0);
     }
+  } else {
+    printf("Unknown message: ");
+    tosc_printMessage(osc);
   }
 }
 
@@ -98,7 +98,7 @@ static void *network_run(void *x) {
   struct sockaddr_in sin;
   int len = 0;
   int sa_len = sizeof(struct sockaddr_in);
-  char buffer[2048];
+  char buffer[2*1024]; // 2kB receive buffer
 
   // prepare the receive socket
   const int fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
@@ -133,9 +133,6 @@ static void *network_run(void *x) {
           }
         } else {
           tosc_parseMessage(&osc, buffer, len);
-#if PRINT_OSC
-          tosc_printMessage(&osc);
-#endif
           handleOscMessage(&osc, 0L, m);
         }
       }
@@ -162,14 +159,14 @@ int main() {
   // setup sound output
   // list all devices: $ aplay -L
   snd_pcm_t *alsa;
-  snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
+  snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0); // 0 > blocking
   snd_pcm_set_params(alsa,
       SND_PCM_FORMAT_FLOAT_LE ,
       SND_PCM_ACCESS_RW_NONINTERLEAVED,
       NUM_OUTPUT_CHANNELS, // stereo output
       SAMPLE_RATE, // 48KHz sampling rate
       1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
-      500000);     // required overall latency in us
+      (unsigned int) ((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE)); // required overall latency in us
 
   // initialise all heavy slots
   m.mods[0] = hv_rpis_osc_new(SAMPLE_RATE);
@@ -200,8 +197,8 @@ int main() {
     // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
-    pthread_mutex_unlock(&m.lock);
     // hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
+    pthread_mutex_unlock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tock);
 #if PRINT_PERF
     struct timespec diff_tock;
@@ -227,10 +224,10 @@ int main() {
 
   // shut down the audio
   snd_pcm_close(alsa);
-/*
+
   // free heavy slots
-  hv_bass_free(m.mods[0]);
-  hv_mixer_free(hv_mixer);
-*/
+  hv_rpis_osc_free(m.mods[0]);
+  // hv_mixer_free(hv_mixer);
+
   return 0;
 }
