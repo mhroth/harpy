@@ -24,14 +24,11 @@
 
 #define ALSA_DEVICE "plughw:CARD=ALSA,DEV=0"
 
-static volatile int fd_receive = 0;
 static volatile bool _keepRunning = true;
 
 // http://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
-// handle Ctrl+C
 static void sigintHandler(int x) {
-  close(fd_receive); // close the OSC socket
-  _keepRunning = false; // indicate that threads should stop
+  _keepRunning = false; // handle Ctrl+C
 }
 
 static void timespec_subtract(struct timespec *result, struct timespec *end, struct timespec *start) {
@@ -76,13 +73,10 @@ typedef struct Modules {
   pthread_mutex_t lock;
 } Modules;
 
-static void handleOscMessage(
-    tosc_message *osc, const uint64_t timetag, Modules *m) {
-  if (!strncmp(tosc_getAddress(osc), "/slot", 5)) {
-    // address looks like "/slot/0/gain"
-    const int i = tosc_getAddress(osc)[6] - '0';
+static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
+  if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
     pthread_mutex_lock(&m->lock);
-    hv_sendFloatToReceiver(m->mods[i], tosc_getAddress(osc)+8, tosc_getNextFloat(osc));
+    hv_sendFloatToReceiver(m->mods[0], "freq", tosc_getNextFloat(osc));
     pthread_mutex_unlock(&m->lock);
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
     if (!strcmp(tosc_getNextString(osc), "quit")) {
@@ -104,7 +98,7 @@ static void *network_run(void *x) {
   char buffer[2*1024]; // 2kB receive buffer
 
   // prepare the receive socket
-  fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
+  const int fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
   assert(fd_receive > 0);
   sin.sin_family = AF_INET;
   sin.sin_port = htons(9000);
@@ -116,20 +110,34 @@ static void *network_run(void *x) {
   tosc_message osc;
 
   while (_keepRunning) {
+    // set up structs for select
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(fd_receive, &rfds);
+
+    struct timeval tv;
+    tv.tv_sec = 1; // wait up to 1 second
+    tv.tv_usec = 0;
+
     // listen to the socket for any responses
-    while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
-      if (tosc_isBundle(buffer)) {
-        tosc_parseBundle(&bundle, buffer, len);
-        const uint64_t timetag = tosc_getTimetag(&bundle);
-        while (tosc_getNextMessage(&bundle, &osc)) {
-          handleOscMessage(&osc, timetag, m);
+    if (select(fd_receive+1, &rfds, NULL, NULL, &tv) > 0) {
+      while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
+        if (tosc_isBundle(buffer)) {
+          tosc_parseBundle(&bundle, buffer, len);
+          const uint64_t timetag = tosc_getTimetag(&bundle);
+          while (tosc_getNextMessage(&bundle, &osc)) {
+            handleOscMessage(&osc, timetag, m);
+          }
+        } else {
+          tosc_parseMessage(&osc, buffer, len);
+          handleOscMessage(&osc, 0L, m);
         }
-      } else {
-        tosc_parseMessage(&osc, buffer, len);
-        handleOscMessage(&osc, 0L, m);
       }
     }
   }
+
+  // close the OSC socket
+  close(fd_receive);
 
   return NULL;
 }
@@ -156,6 +164,13 @@ int main() {
       SAMPLE_RATE, // 48KHz sampling rate
       1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
       (unsigned int) ((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE)); // required overall latency in us
+  
+  {
+    snd_pcm_uframes_t buffer_size;
+    snd_pcm_uframes_t period_size;
+    snd_pcm_get_params(alsa, &buffer_size, &period_size);
+    printf("ALSA:\n  buffer size: %lu\n  period size: %lu\n", buffer_size, period_size);
+  }
 
   // initialise all heavy slots
   m.mods[0] = hv_rpis_osc_new(SAMPLE_RATE);
@@ -171,7 +186,7 @@ int main() {
   // create and start the network thread
   // https://computing.llnl.gov/tutorials/pthreads/
   pthread_t networkThread = 0;
-  pthread_create(&networkThread, NULL, &network_run, NULL);
+  pthread_create(&networkThread, NULL, &network_run, &m);
 
   // the audio loop
   float *audioBuffer[2] = {
