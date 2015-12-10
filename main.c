@@ -73,13 +73,10 @@ typedef struct Modules {
   pthread_mutex_t lock;
 } Modules;
 
-static void handleOscMessage(
-    tosc_message *osc, const uint64_t timetag, Modules *m) {
-  if (!strncmp(tosc_getAddress(osc), "/slot", 5)) {
-    // address looks like "/slot/0/gain"
-    const int i = tosc_getAddress(osc)[6] - '0';
+static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
+  if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
     pthread_mutex_lock(&m->lock);
-    hv_sendFloatToReceiver(m->mods[i], tosc_getAddress(osc)+8, tosc_getNextFloat(osc));
+    hv_sendFloatToReceiver(m->mods[0], "freq", tosc_getNextFloat(osc));
     pthread_mutex_unlock(&m->lock);
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
     if (!strcmp(tosc_getNextString(osc), "quit")) {
@@ -167,6 +164,13 @@ int main() {
       SAMPLE_RATE, // 48KHz sampling rate
       1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
       (unsigned int) ((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE)); // required overall latency in us
+  
+  {
+    snd_pcm_uframes_t buffer_size;
+    snd_pcm_uframes_t period_size;
+    snd_pcm_get_params(alsa, &buffer_size, &period_size);
+    printf("ALSA:\n  buffer size: %lu\n  period size: %lu\n", buffer_size, period_size);
+  }
 
   // initialise all heavy slots
   m.mods[0] = hv_rpis_osc_new(SAMPLE_RATE);
@@ -182,7 +186,7 @@ int main() {
   // create and start the network thread
   // https://computing.llnl.gov/tutorials/pthreads/
   pthread_t networkThread = 0;
-  pthread_create(&networkThread, NULL, &network_run, NULL);
+  pthread_create(&networkThread, NULL, &network_run, &m);
 
   // the audio loop
   float *audioBuffer[2] = {
@@ -194,9 +198,9 @@ int main() {
     clock_gettime(CLOCK_REALTIME, &tick);
     pthread_mutex_lock(&m.lock);
     hv_rpis_osc_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
     // hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tock);
