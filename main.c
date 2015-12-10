@@ -1,16 +1,16 @@
 /* Copyright (c) 2015, Martin Roth (mhroth@gmail.com). All Rights Reserved. */
 
-#include <asoundlib.h>       // alsa
+#include <alsa/asoundlib.h>  // alsa
 #include <arpa/inet.h>       // network
 #include <pthread.h>         // threads
 #include <stdatomic.h>
 #include <sys/socket.h>      // sockets
-#include <time.h>            // nanosleep, clock_gettime
 #include <stdio.h>
 #include <sys/time.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>          // close
+#include <ifaddrs.h>
 
 #include "tinyosc/tinyosc.h" // OSC support
 
@@ -20,7 +20,7 @@
 #define SAMPLE_RATE 48000
 #define BLOCK_SIZE 256
 #define NUM_OUTPUT_CHANNELS 2
-#define SEC_TO_NS 1000000000
+#define SEC_TO_NS 1000000000L
 
 static volatile bool _keepRunning = true;
 
@@ -49,14 +49,16 @@ static void hv_sendHook(double timestamp, const char *receiverName,
   // TODO(mhroth)
 }
 
-static void getEn0Ip(char *host) {
+static void printIpForInterface(const char *ifName) {
+  char host[INET_ADDRSTRLEN];
   struct ifaddrs *ifaddr = NULL;
   getifaddrs(&ifaddr);
   for (struct ifaddrs *ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-    if (!strcmp(ifa->ifa_name, "en0")) {
+    if (!strcmp(ifa->ifa_name, ifName)) {
       if (ifa->ifa_addr->sa_family == AF_INET) {
         struct sockaddr_in *sa = (struct sockaddr_in *) ifa->ifa_addr;
         inet_ntop(AF_INET, &(sa->sin_addr), host, INET_ADDRSTRLEN);
+        printf("r.pistorius listening on osc://%s:9000\n", host);
         break;
       }
     }
@@ -74,11 +76,11 @@ static void handleOscMessage(
   if (!strncmp(tosc_getAddress(osc), "/slot", 5)) {
     // address looks like "/slot/0/gain"
     const int i = tosc_getAddress(osc)[6] - '0';
-    pthread_mutex_lock(m->lock);
+    pthread_mutex_lock(&m->lock);
     hv_vscheduleMessageForReceiver(m->mods[i],
         tosc_getAddress(osc)+8, 0.0,
         "f", tosc_getNextFloat(osc));
-    pthread_mutex_unlock(m->lock);
+    pthread_mutex_unlock(&m->lock);
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
     if (!strcmp(tosc_getNextString(osc), "quit")) {
       _keepRunning = false;
@@ -102,11 +104,7 @@ static void *network_run(void *x) {
   sin.sin_port = htons(9000);
   sin.sin_addr.s_addr = INADDR_ANY;
   bind(fd_receive, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
-  {
-    char host[INET_ADDRSTRLEN];
-    getEn0Ip(host);
-    printf("r.pistorius listening on osc://%s:9000\n", host);
-  }
+  printIpForInterface("eth0");
 
   tosc_bundle bundle;
   tosc_message osc;
@@ -125,7 +123,7 @@ static void *network_run(void *x) {
     if (select(fd_receive+1, &rfds, NULL, NULL, &tv) > 0) {
       while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
         if (tosc_isBundle(buffer)) {
-          tosc_readBundle(&bundle, buffer, len);
+          tosc_parseBundle(&bundle, buffer, len);
           const uint64_t timetag = tosc_getTimetag(&bundle);
           while (tosc_getNextMessage(&bundle, &osc)) {
             handleOscMessage(&osc, timetag, m);
@@ -134,7 +132,7 @@ static void *network_run(void *x) {
 #if !NDEBUG
           tosc_printOscBuffer(buffer, len);
 #endif
-          tosc_readMessage(&osc, buffer, len);
+          tosc_parseMessage(&osc, buffer, len);
           handleOscMessage(&osc, 0L, m);
         }
       }
@@ -150,14 +148,14 @@ static void *network_run(void *x) {
 // http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_min_8c-example.html
 int main() {
   signal(SIGINT, &sigintHandler); // register the SIGINT handler
-
+/*
   // create the modules (and initialise the lock)
   Modules m;
   pthread_mutex_t(&m.lock, NULL);
 
   struct timespec tick, tock, diff_tick;
 
-  setup sound output
+  // setup sound output
   snd_pcm_t *alsa;
   snd_pcm_open(&alsa, "r.pistorius", SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC);
   snd_pcm_set_params(alsa,
@@ -178,12 +176,12 @@ int main() {
   hv_setPrintHook(hv_mixer, &hv_printHook);
   hv_setSendHook(hv_mixer, &hv_sendHook);
   assert(hv_getNumOutputChannels(hv_mixer) == NUM_OUTPUT_CHANNELS);
-
+*/
   // create and start the network thread
   // https://computing.llnl.gov/tutorials/pthreads/
   pthread_t networkThread = 0;
-  pthread_create(&networkThread, NULL, &network_run, &m);
-
+  pthread_create(&networkThread, NULL, &network_run, NULL);
+/*
   // the audio loop
   float audioBuffer[4 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE];
   while (_keepRunning) {
@@ -212,10 +210,10 @@ int main() {
       if (frames < 0) printf("ALSA: snd_pcm_writen failed: %s\n", snd_strerror(frames));
     }
   }
-
+*/
   // wait until the network thread has quit
   pthread_join(networkThread, NULL);
-
+/*
   // destroy the lock
   pthread_mutex_destroy(&m.lock);
 
@@ -225,6 +223,6 @@ int main() {
   // free heavy slots
   hv_bass_free(m.mods[0]);
   hv_mixer_free(hv_mixer);
-
+*/
   return 0;
 }

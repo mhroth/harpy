@@ -1,4 +1,4 @@
 #!/bin/bash
 
 # -DNDEBUG disables all assert checking
-gcc main.c tinyosc/*.c -std=c11 -Werror -O3 -lm -lrt -o rpistorius
+clang main.c tinyosc/*.c heavy/mixer/*.c -D_GNU_SOURCE -std=c11 -Werror -Ofast -lm -lrt -lasound -lpthread -o rpistorius
