@@ -15,12 +15,14 @@
 #include "tinyosc/tinyosc.h" // OSC support
 
 // heavy slots
-#include "heavy/mixer/Heavy_mixer.h"
+#include "heavy/rpis_osc/Heavy_rpis_osc.h"
 
 #define SAMPLE_RATE 48000
 #define BLOCK_SIZE 256
 #define NUM_OUTPUT_CHANNELS 2
 #define SEC_TO_NS 1000000000L
+
+#define ALSA_DEVICE "plughw:CARD=ALSA,DEV=0"
 
 static volatile bool _keepRunning = true;
 
@@ -130,10 +132,10 @@ static void *network_run(void *x) {
             handleOscMessage(&osc, timetag, m);
           }
         } else {
-#if !NDEBUG
-          tosc_printOscBuffer(buffer, len);
-#endif
           tosc_parseMessage(&osc, buffer, len);
+#if PRINT_OSC
+          tosc_printMessage(&osc);
+#endif
           handleOscMessage(&osc, 0L, m);
         }
       }
@@ -147,6 +149,7 @@ static void *network_run(void *x) {
 }
 
 // http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_min_8c-example.html
+// sudo amixer cset numid=3 1
 int main() {
   signal(SIGINT, &sigintHandler); // register the SIGINT handler
 
@@ -159,7 +162,7 @@ int main() {
   // setup sound output
   // list all devices: $ aplay -L
   snd_pcm_t *alsa;
-  snd_pcm_open(&alsa, "plughw:CARD=ALSA,DEV=0", SND_PCM_STREAM_PLAYBACK, 0);
+  snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
   snd_pcm_set_params(alsa,
       SND_PCM_FORMAT_FLOAT_LE ,
       SND_PCM_ACCESS_RW_NONINTERLEAVED,
@@ -167,13 +170,13 @@ int main() {
       SAMPLE_RATE, // 48KHz sampling rate
       1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
       500000);     // required overall latency in us
-/*
+
   // initialise all heavy slots
-  m.mods[0] = hv_bass_new(SAMPLE_RATE);
+  m.mods[0] = hv_rpis_osc_new(SAMPLE_RATE);
   hv_setPrintHook(m.mods[0], &hv_printHook);
   hv_setSendHook(m.mods[0], &hv_sendHook);
   assert(hv_getNumOutputChannels(m.mods[0]) == NUM_OUTPUT_CHANNELS);
-
+/*
   Hv_mixer *hv_mixer = hv_mixer_new(SAMPLE_RATE);
   hv_setPrintHook(hv_mixer, &hv_printHook);
   hv_setSendHook(hv_mixer, &hv_sendHook);
@@ -189,27 +192,25 @@ int main() {
     (float *) alloca(BLOCK_SIZE*sizeof(float)),
     (float *) alloca(BLOCK_SIZE*sizeof(float))
   };
-  memset(audioBuffer[0], 0, BLOCK_SIZE*sizeof(float));
-  memset(audioBuffer[1], 0, BLOCK_SIZE*sizeof(float));
   while (_keepRunning) {
     // process Heavy
     clock_gettime(CLOCK_REALTIME, &tick);
     pthread_mutex_lock(&m.lock);
-    // hv_bass_process_inline(m.mods[0], NULL, audioBuffer+(0 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
+    hv_rpis_osc_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
     // hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
     clock_gettime(CLOCK_REALTIME, &tock);
-#if !NDEBUG
+#if PRINT_PERF
     struct timespec diff_tock;
     timespec_subtract(&diff_tock, &tock, &tick);
     const int64_t elapsed_ns = (((int64_t) diff_tock.tv_sec) * SEC_TO_NS) + diff_tock.tv_nsec;
     printf("%llins (%0.3f%%CPU)\n",
         elapsed_ns,
         100.0*elapsed_ns/((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE));
-#endif // perf debug
+#endif // PRINT_PERF
 
     snd_pcm_sframes_t frames = snd_pcm_writen(alsa, (void **) audioBuffer, BLOCK_SIZE);
     if (frames < 0) {

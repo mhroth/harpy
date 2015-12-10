@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# -DNDEBUG disables all assert checking
-clang main.c tinyosc/*.c heavy/mixer/*.c \
+clang main.c tinyosc/*.c \
+heavy/rpis_osc/*.c \
 -std=c11 \
--D_GNU_SOURCE \
+-D_GNU_SOURCE -DNDEBUG -DPRINT_PERF=0 -DPRINT_OSC=1 \
 -Werror -Wno-#warnings \
 -Ofast -ffast-math \
 -mcpu=cortex-a7 -mfloat-abi=hard \
