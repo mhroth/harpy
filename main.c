@@ -24,14 +24,11 @@
 
 #define ALSA_DEVICE "plughw:CARD=ALSA,DEV=0"
 
-static volatile int fd_receive = 0;
 static volatile bool _keepRunning = true;
 
 // http://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
-// handle Ctrl+C
 static void sigintHandler(int x) {
-  close(fd_receive); // close the OSC socket
-  _keepRunning = false; // indicate that threads should stop
+  _keepRunning = false; // handle Ctrl+C
 }
 
 static void timespec_subtract(struct timespec *result, struct timespec *end, struct timespec *start) {
@@ -104,7 +101,7 @@ static void *network_run(void *x) {
   char buffer[2*1024]; // 2kB receive buffer
 
   // prepare the receive socket
-  fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
+  const int fd_receive = socket(AF_INET, SOCK_DGRAM, 0);
   assert(fd_receive > 0);
   sin.sin_family = AF_INET;
   sin.sin_port = htons(9000);
@@ -116,20 +113,34 @@ static void *network_run(void *x) {
   tosc_message osc;
 
   while (_keepRunning) {
+    // set up structs for select
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(fd_receive, &rfds);
+
+    struct timeval tv;
+    tv.tv_sec = 1; // wait up to 1 second
+    tv.tv_usec = 0;
+
     // listen to the socket for any responses
-    while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
-      if (tosc_isBundle(buffer)) {
-        tosc_parseBundle(&bundle, buffer, len);
-        const uint64_t timetag = tosc_getTimetag(&bundle);
-        while (tosc_getNextMessage(&bundle, &osc)) {
-          handleOscMessage(&osc, timetag, m);
+    if (select(fd_receive+1, &rfds, NULL, NULL, &tv) > 0) {
+      while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
+        if (tosc_isBundle(buffer)) {
+          tosc_parseBundle(&bundle, buffer, len);
+          const uint64_t timetag = tosc_getTimetag(&bundle);
+          while (tosc_getNextMessage(&bundle, &osc)) {
+            handleOscMessage(&osc, timetag, m);
+          }
+        } else {
+          tosc_parseMessage(&osc, buffer, len);
+          handleOscMessage(&osc, 0L, m);
         }
-      } else {
-        tosc_parseMessage(&osc, buffer, len);
-        handleOscMessage(&osc, 0L, m);
       }
     }
   }
+
+  // close the OSC socket
+  close(fd_receive);
 
   return NULL;
 }
