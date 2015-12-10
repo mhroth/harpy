@@ -94,7 +94,6 @@ static void *network_run(void *x) {
 
   struct sockaddr_in sin;
   int len = 0;
-  int sa_len = sizeof(struct sockaddr_in);
   char buffer[2*1024]; // 2kB receive buffer
 
   // prepare the receive socket
@@ -121,7 +120,8 @@ static void *network_run(void *x) {
 
     // listen to the socket for any responses
     if (select(fd_receive+1, &rfds, NULL, NULL, &tv) > 0) {
-      while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
+      size_t sa_len = sizeof(struct sockaddr_in);
+      if ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
         if (tosc_isBundle(buffer)) {
           tosc_parseBundle(&bundle, buffer, len);
           const uint64_t timetag = tosc_getTimetag(&bundle);
