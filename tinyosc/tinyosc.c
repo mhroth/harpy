@@ -15,7 +15,7 @@
  */
 
 #include <netinet/in.h>
-#if __unix__
+#if __unix__ && !__APPLE__
 #include <endian.h>
 #define htonll(x) htobe64(x)
 #define ntohll(x) be64toh(x)
