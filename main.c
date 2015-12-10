@@ -148,16 +148,17 @@ static void *network_run(void *x) {
 // http://www.alsa-project.org/alsa-doc/alsa-lib/_2test_2pcm_min_8c-example.html
 int main() {
   signal(SIGINT, &sigintHandler); // register the SIGINT handler
-/*
+
   // create the modules (and initialise the lock)
   Modules m;
-  pthread_mutex_t(&m.lock, NULL);
+  pthread_mutex_init(&m.lock, NULL);
 
   struct timespec tick, tock, diff_tick;
 
   // setup sound output
+  // list all devices: $ aplay -L
   snd_pcm_t *alsa;
-  snd_pcm_open(&alsa, "r.pistorius", SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC);
+  snd_pcm_open(&alsa, "plughw:CARD=ALSA,DEV=0", SND_PCM_STREAM_PLAYBACK, 0);
   snd_pcm_set_params(alsa,
       SND_PCM_FORMAT_FLOAT_LE ,
       SND_PCM_ACCESS_RW_NONINTERLEAVED,
@@ -165,7 +166,7 @@ int main() {
       SAMPLE_RATE, // 48KHz sampling rate
       1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
       500000);     // required overall latency in us
-
+/*
   // initialise all heavy slots
   m.mods[0] = hv_bass_new(SAMPLE_RATE);
   hv_setPrintHook(m.mods[0], &hv_printHook);
@@ -181,45 +182,49 @@ int main() {
   // https://computing.llnl.gov/tutorials/pthreads/
   pthread_t networkThread = 0;
   pthread_create(&networkThread, NULL, &network_run, NULL);
-/*
+
   // the audio loop
-  float audioBuffer[4 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE];
+  float *audioBuffer[2] = {
+    (float *) alloca(BLOCK_SIZE*sizeof(float)),
+    (float *) alloca(BLOCK_SIZE*sizeof(float))
+  };
   while (_keepRunning) {
     // process Heavy
     pthread_mutex_lock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tick);
-    hv_bass_process_inline(m.mods[0], NULL, audioBuffer+(0 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[0], NULL, audioBuffer+(0 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
-    hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
+    // hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
     clock_gettime(CLOCK_REALTIME, &tock);
     timespec_subtract(&diff_tick, &tock, &tick);
     const int64_t elapsed_ns = (((int64_t) diff_tick.tv_sec) * SEC_TO_NS) + diff_tick.tv_nsec;
 #if !NDEBUG
-    printf("%lli\nns (%0.3f %%CPU)\n",
+    printf("%llins (%0.3f %%CPU)\n",
         elapsed_ns,
-        100.0*elapsed_ns/(SEC_TO_NS*BLOCK_SIZE/((double) SAMPLE_RATE)));
+        100.0*elapsed_ns/((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE));
 #endif
-
+/*
     snd_pcm_sframes_t frames = snd_pcm_writen(
-        alsa, audioBuffer, NUM_OUTPUT_CHANNELS*BLOCK_SIZE*sizeof(float));
+        alsa, (void **) audioBuffer, NUM_OUTPUT_CHANNELS*BLOCK_SIZE*sizeof(float));
     if (frames < 0) {
-      frames = snd_pcm_recover(handle, audioBuffer, 0);
+      frames = snd_pcm_recover(alsa, frames, 0);
       if (frames < 0) printf("ALSA: snd_pcm_writen failed: %s\n", snd_strerror(frames));
     }
-  }
 */
+  }
+
   // wait until the network thread has quit
   pthread_join(networkThread, NULL);
-/*
+
   // destroy the lock
   pthread_mutex_destroy(&m.lock);
 
   // shut down the audio
   snd_pcm_close(alsa);
-
+/*
   // free heavy slots
   hv_bass_free(m.mods[0]);
   hv_mixer_free(hv_mixer);
