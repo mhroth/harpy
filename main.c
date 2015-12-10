@@ -194,9 +194,9 @@ int main() {
     clock_gettime(CLOCK_REALTIME, &tick);
     pthread_mutex_lock(&m.lock);
     hv_rpis_osc_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS * BLOCK_SIZE), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
+    // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
     // hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tock);
