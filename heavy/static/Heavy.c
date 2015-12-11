@@ -14,8 +14,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "HvBase.h"
-#include "HvTable.h"
+#include "Heavy.h"
 
 #if !HV_WIN
 #pragma mark - Heavy Table
@@ -39,7 +38,7 @@ hv_size_t hv_table_getLength(HvTable *o) {
 #pragma mark - Heavy Message
 #endif
 
-hv_size_t hv_msg_getByteSize (hv_uint32_t numElements) {
+hv_size_t hv_msg_getByteSize(hv_uint32_t numElements) {
   return msg_getByteSize(numElements);
 }
 
@@ -121,37 +120,59 @@ void hv_msg_free(HvMessage *m) {
 #pragma mark - Heavy Common
 #endif
 
-double hv_getSampleRate(HvBase *c) {
-  return ctx_getSampleRate(c);
+double hv_getSampleRate(Heavy *c) {
+  return ctx_getSampleRate(Base(c));
 }
 
-int hv_getNumInputChannels(HvBase *c) {
-  return ctx_getNumInputChannels(c);
+int hv_getNumInputChannels(Heavy *c) {
+  return ctx_getNumInputChannels(Base(c));
 }
 
-int hv_getNumOutputChannels(HvBase *c) {
-  return ctx_getNumOutputChannels(c);
+int hv_getNumOutputChannels(Heavy *c) {
+  return ctx_getNumOutputChannels(Base(c));
 }
 
-const char *hv_getName(HvBase *c) {
-  return ctx_getName(c);
+const char *hv_getName(Heavy *c) {
+  return ctx_getName(Base(c));
 }
 
-void hv_setPrintHook(HvBase *c, void (*f)(double, const char *, const char *, void *)) {
-  ctx_setPrintHook(c, f);
+void hv_setPrintHook(Heavy *c,
+    void (*f)(double, const char *, const char *, void *)) {
+  ctx_setPrintHook(Base(c), f);
 }
 
-void hv_setSendHook(HvBase *c, void (*f)(double, const char *, const HvMessage *const, void *)) {
-  ctx_setSendHook(c, f);
+void hv_setSendHook(Heavy *c,
+    void (*f)(double, const char *, const HvMessage *const, void *)) {
+  ctx_setSendHook(Base(c), f);
 }
 
-void hv_vscheduleMessageForReceiver(HvBase *c, const char *receiverName, const double delayMs, const char *format, ...) {
+void hv_sendBangToReceiver(Heavy *c, const char *receiverName) {
+  HvMessage *m = HV_MESSAGE_ON_STACK(1);
+  msg_initWithBang(m, Base(c)->blockStartTimestamp);
+  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+}
+
+void hv_sendFloatToReceiver(Heavy *c, const char *receiverName, const float x) {
+  HvMessage *m = HV_MESSAGE_ON_STACK(1);
+  msg_initWithFloat(m, Base(c)->blockStartTimestamp, x);
+  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+}
+
+void hv_sendSymbolToReceiver(Heavy *c, const char *receiverName, char *s) {
+  HvMessage *m = HV_MESSAGE_ON_STACK(1);
+  msg_initWithSymbol(m, Base(c)->blockStartTimestamp, s);
+  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+}
+
+void hv_vscheduleMessageForReceiver(Heavy *c, const char *receiverName,
+    const double delayMs, const char *format, ...) {
   va_list ap;
   va_start(ap, format);
 
   const int numElem = (int) hv_strlen(format);
   HvMessage *m = HV_MESSAGE_ON_STACK(numElem);
-  msg_init(m, numElem, c->blockStartTimestamp + (hv_uint32_t) (hv_max_d(0.0, delayMs)*ctx_getSampleRate(c)/1000.0));
+  msg_init(m, numElem, Base(c)->blockStartTimestamp +
+      (hv_uint32_t) (delayMs*ctx_getSampleRate(Base(c))/1000.0));
   for (int i = 0; i < numElem; i++) {
     switch (format[i]) {
       case 'b': msg_setBang(m,i); break;
@@ -160,37 +181,39 @@ void hv_vscheduleMessageForReceiver(HvBase *c, const char *receiverName, const d
       default: break;
     }
   }
-  ctx_scheduleMessageForReceiver(c, receiverName, m);
+  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
 
   va_end(ap);
 }
 
-void hv_scheduleMessageForReceiver(HvBase *c, const char *receiverName, double delayMs, HvMessage *m) {
+void hv_scheduleMessageForReceiver(Heavy *c, const char *receiverName,
+    double delayMs, HvMessage *m) {
   hv_assert(delayMs >= 0.0);
-  msg_setTimestamp(m, c->blockStartTimestamp + (hv_uint32_t) (delayMs*ctx_getSampleRate(c)/1000.0));
-  ctx_scheduleMessageForReceiver(c, receiverName, m);
+  msg_setTimestamp(m, Base(c)->blockStartTimestamp +
+      (hv_uint32_t) (delayMs*ctx_getSampleRate(Base(c))/1000.0));
+  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
 }
 
-HvTable *hv_getTableForName(HvBase *c, const char *tableName) {
-  return ctx_getTableForName(c, tableName);
+HvTable *hv_getTableForName(Heavy *c, const char *tableName) {
+  return ctx_getTableForName(Base(c), tableName);
 }
 
-void hv_cancelMessage(HvBase *c, HvMessage *m) {
-  ctx_cancelMessage(c, m, NULL);
+void hv_cancelMessage(Heavy *c, HvMessage *m) {
+  ctx_cancelMessage(Base(c), m, NULL);
 }
 
-double hv_getCurrentTime(HvBase *c) {
-  return ((double) c->blockStartTimestamp)/c->sampleRate;
+double hv_getCurrentTime(Heavy *c) {
+  return ((double) Base(c)->blockStartTimestamp)/Base(c)->sampleRate;
 }
 
-void *hv_getUserData(HvBase *c) {
-  return ctx_getUserData(c);
+void *hv_getUserData(Heavy *c) {
+  return ctx_getUserData(Base(c));
 }
 
-void hv_setUserData(HvBase *c, void *userData) {
-  ctx_setUserData(c, userData);
+void hv_setUserData(Heavy *c, void *userData) {
+  ctx_setUserData(Base(c), userData);
 }
 
-void hv_setBasePath(HvBase *c, const char *basePath) {
-  ctx_setBasePath(c, basePath);
+void hv_setBasePath(Heavy *c, const char *basePath) {
+  ctx_setBasePath(Base(c), basePath);
 }

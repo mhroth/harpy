@@ -143,8 +143,8 @@ bool msg_hasFormat(const HvMessage *m, const char *fmt) {
 
 bool msg_compareSymbol(const HvMessage *m, int i, const char *s) {
   switch (msg_getType(m,i)) {
-    case SYMBOL: return !hv_strcmp(msg_getSymbol(m, i), s);
-    case HASH: return (msg_getHash(m,i) == msg_symbolToHash(s));
+    case HV_MSG_SYMBOL: return !hv_strcmp(msg_getSymbol(m, i), s);
+    case HV_MSG_HASH: return (msg_getHash(m,i) == msg_symbolToHash(s));
     default: return false;
   }
 }
@@ -153,10 +153,10 @@ bool msg_equalsElement(const HvMessage *m, int i_m, const HvMessage *n, int i_n)
   if (i_m < msg_getNumElements(m) && i_n < msg_getNumElements(n)) {
     if (msg_getType(m, i_m) == msg_getType(n, i_n)) {
       switch (msg_getType(m, i_m)) {
-        case BANG: return true;
-        case FLOAT: return (msg_getFloat(m, i_m) == msg_getFloat(n, i_n));
-        case SYMBOL: return msg_compareSymbol(m, i_m, msg_getSymbol(n, i_n));
-        case HASH: return msg_getHash(m,i_m) == msg_getHash(n,i_n);
+        case HV_MSG_BANG: return true;
+        case HV_MSG_FLOAT: return (msg_getFloat(m, i_m) == msg_getFloat(n, i_n));
+        case HV_MSG_SYMBOL: return msg_compareSymbol(m, i_m, msg_getSymbol(n, i_n));
+        case HV_MSG_HASH: return msg_getHash(m,i_m) == msg_getHash(n,i_n);
         default: break;
       }
     }
@@ -166,10 +166,10 @@ bool msg_equalsElement(const HvMessage *m, int i_m, const HvMessage *n, int i_n)
 
 void msg_setElementToFrom(HvMessage *n, int i_n, const HvMessage *const m, int i_m) {
   switch (msg_getType(m, i_m)) {
-    case BANG: msg_setBang(n, i_n); break;
-    case FLOAT: msg_setFloat(n, i_n, msg_getFloat(m, i_m)); break;
-    case SYMBOL: msg_setSymbol(n, i_n, msg_getSymbol(m, i_m)); break;
-    case HASH: msg_setHash(n, i_n, msg_getHash(m, i_m));
+    case HV_MSG_BANG: msg_setBang(n, i_n); break;
+    case HV_MSG_FLOAT: msg_setFloat(n, i_n, msg_getFloat(m, i_m)); break;
+    case HV_MSG_SYMBOL: msg_setSymbol(n, i_n, msg_getSymbol(m, i_m)); break;
+    case HV_MSG_HASH: msg_setHash(n, i_n, msg_getHash(m, i_m));
     default: break;
   }
 }
@@ -211,13 +211,13 @@ hv_uint32_t msg_symbolToHash(const char *s) {
 hv_uint32_t msg_getHash(const HvMessage *const m, int i) {
   hv_assert(i < msg_getNumElements(m)); // invalid index
   switch (msg_getType(m,i)) {
-    case BANG: return 0xFFFFFFFF;
-    case FLOAT: {
+    case HV_MSG_BANG: return 0xFFFFFFFF;
+    case HV_MSG_FLOAT: {
       float f = msg_getFloat(m,i);
       return *((hv_uint32_t *) &f);
     }
-    case SYMBOL: return msg_symbolToHash(msg_getSymbol(m,i));
-    case HASH: return (&(m->elem)+i)->data.h;
+    case HV_MSG_SYMBOL: return msg_symbolToHash(msg_getSymbol(m,i));
+    case HV_MSG_HASH: return (&(m->elem)+i)->data.h;
     default: return 0;
   }
 }
@@ -232,10 +232,10 @@ char *msg_toString(const HvMessage *m) {
   for (int i = 0; i < msg_getNumElements(m); i++) {
     // length of our string is each atom plus a space, or \0 on the end
     switch (msg_getType(m, i)) {
-      case BANG: len[i] = hv_snprintf(NULL, 0, "%s", "bang") + 1; break;
-      case FLOAT: len[i] = hv_snprintf(NULL, 0, "%g", msg_getFloat(m, i)) + 1; break;
-      case SYMBOL: len[i] = hv_snprintf(NULL, 0, "%s", msg_getSymbol(m, i)) + 1; break;
-      case HASH: len[i] = hv_snprintf(NULL, 0, "0x%X", msg_getHash(m, i)) + 1; break;
+      case HV_MSG_BANG: len[i] = hv_snprintf(NULL, 0, "%s", "bang") + 1; break;
+      case HV_MSG_FLOAT: len[i] = hv_snprintf(NULL, 0, "%g", msg_getFloat(m, i)) + 1; break;
+      case HV_MSG_SYMBOL: len[i] = hv_snprintf(NULL, 0, "%s", msg_getSymbol(m, i)) + 1; break;
+      case HV_MSG_HASH: len[i] = hv_snprintf(NULL, 0, "0x%X", msg_getHash(m, i)) + 1; break;
       default: break;
     }
     size += len[i];
@@ -250,10 +250,10 @@ char *msg_toString(const HvMessage *m) {
   for (int i = 0; i < msg_getNumElements(m); i++) {
     // put a string representation of each atom into the final string
     switch (msg_getType(m, i)) {
-      case BANG: hv_snprintf(finalString+pos, len[i], "%s", "bang"); break;
-      case FLOAT: hv_snprintf(finalString+pos, len[i], "%g", msg_getFloat(m, i)); break;
-      case SYMBOL: hv_snprintf(finalString+pos, len[i], "%s", msg_getSymbol(m, i)); break;
-      case HASH: hv_snprintf(finalString+pos, len[i], "0x%X", msg_getHash(m, i)); break;
+      case HV_MSG_BANG: hv_snprintf(finalString+pos, len[i], "%s", "bang"); break;
+      case HV_MSG_FLOAT: hv_snprintf(finalString+pos, len[i], "%g", msg_getFloat(m, i)); break;
+      case HV_MSG_SYMBOL: hv_snprintf(finalString+pos, len[i], "%s", msg_getSymbol(m, i)); break;
+      case HV_MSG_HASH: hv_snprintf(finalString+pos, len[i], "0x%X", msg_getHash(m, i)); break;
       default: break;
     }
     pos += len[i];
@@ -289,15 +289,15 @@ bool msg_resolveDollarArguments(HvMessage *m, HvMessage *n, int z, char *buf, hv
         } else {
           switch (msg_getType(m, index)) {
             default:
-            case BANG: break; // this case should never happen
-            case FLOAT: {
+            case HV_MSG_BANG: break; // this case should never happen
+            case HV_MSG_FLOAT: {
               const hv_size_t x = snprintf(NULL, 0, "%g", msg_getFloat(m,index));
               if (x < len-j) { // ensure that the buffer is big enough
                 j += snprintf(buf+j, len-j, "%g", msg_getFloat(m,index));
               }
               break;
             }
-            case SYMBOL: {
+            case HV_MSG_SYMBOL: {
               const hv_size_t x = snprintf(NULL, 0, "%s", msg_getSymbol(m,index));
               if (x < len-j) {
                 j += snprintf(buf+j, len-j, "%s", msg_getSymbol(m,index));

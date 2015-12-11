@@ -20,10 +20,10 @@
 #include "Utils.h"
 
 typedef enum ElementType {
-  BANG,
-  FLOAT,
-  SYMBOL,
-  HASH
+  HV_MSG_BANG,
+  HV_MSG_FLOAT,
+  HV_MSG_SYMBOL,
+  HV_MSG_HASH
 } ElementType;
 
 typedef struct Element {
@@ -99,17 +99,17 @@ static inline ElementType msg_getType(const HvMessage *m, int index) {
 
 static inline void msg_setBang(HvMessage *m, int index) {
   hv_assert(index < msg_getNumElements(m)); // invalid index
-  (&(m->elem)+index)->type = BANG;
+  (&(m->elem)+index)->type = HV_MSG_BANG;
   (&(m->elem)+index)->data.s = NULL;
 }
 
 static inline bool msg_isBang(const HvMessage *m, int index) {
-  return (index < msg_getNumElements(m)) ? (msg_getType(m,index) == BANG) : false;
+  return (index < msg_getNumElements(m)) ? (msg_getType(m,index) == HV_MSG_BANG) : false;
 }
 
 static inline void msg_setFloat(HvMessage *m, int index, float f) {
   hv_assert(index < msg_getNumElements(m)); // invalid index
-  (&(m->elem)+index)->type = FLOAT;
+  (&(m->elem)+index)->type = HV_MSG_FLOAT;
   (&(m->elem)+index)->data.f = f;
 }
 
@@ -119,22 +119,22 @@ static inline float msg_getFloat(const HvMessage *const m, int index) {
 }
 
 static inline bool msg_isFloat(const HvMessage *const m, int index) {
-  return (index < msg_getNumElements(m)) ? (msg_getType(m,index) == FLOAT) : false;
+  return (index < msg_getNumElements(m)) ? (msg_getType(m,index) == HV_MSG_FLOAT) : false;
 }
 
 static inline void msg_setHash(HvMessage *m, int index, hv_uint32_t h) {
   hv_assert(index < msg_getNumElements(m)); // invalid index
-  (&(m->elem)+index)->type = HASH;
+  (&(m->elem)+index)->type = HV_MSG_HASH;
   (&(m->elem)+index)->data.h = h;
 }
 
 static inline bool msg_isHash(const HvMessage *m, int index) {
-  return (index < msg_getNumElements(m)) ? (msg_getType(m, index) == HASH) : false;
+  return (index < msg_getNumElements(m)) ? (msg_getType(m, index) == HV_MSG_HASH) : false;
 }
 
 /** Returns true if the element is a hash or symbol. False otherwise. */
 static inline bool msg_isHashLike(const HvMessage *m, int index) {
-  return (index < msg_getNumElements(m)) ? ((msg_getType(m, index) == HASH) || (msg_getType(m, index) == SYMBOL)) : false;
+  return (index < msg_getNumElements(m)) ? ((msg_getType(m, index) == HV_MSG_HASH) || (msg_getType(m, index) == HV_MSG_SYMBOL)) : false;
 }
 
 /** Returns a 32-bit hash of the given string. */
@@ -145,7 +145,7 @@ hv_uint32_t msg_getHash(const HvMessage *const m, int i);
 
 static inline void msg_setSymbol(HvMessage *m, int index, char *s) {
   hv_assert(index < msg_getNumElements(m)); // invalid index
-  (&(m->elem)+index)->type = SYMBOL;
+  (&(m->elem)+index)->type = HV_MSG_SYMBOL;
   (&(m->elem)+index)->data.s = s;
 }
 
@@ -155,7 +155,7 @@ static inline char *msg_getSymbol(const HvMessage *m, int index) {
 }
 
 static inline bool msg_isSymbol(const HvMessage *m, int index) {
-  return (index < msg_getNumElements(m)) ? (msg_getType(m, index) == SYMBOL) : false;
+  return (index < msg_getNumElements(m)) ? (msg_getType(m, index) == HV_MSG_SYMBOL) : false;
 }
 
 bool msg_compareSymbol(const HvMessage *m, int i, const char *s);

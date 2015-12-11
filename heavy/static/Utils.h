@@ -21,7 +21,7 @@
 #if _WIN32 || _WIN64 || WINAPI_FAMILY
 #define HV_WIN 1
 #include <stddef.h>
-#if defined (_MSC_VER)
+#ifdef _MSC_VER
 #define HV_MSVC 1
 #endif
 #define hv_size_t unsigned long
@@ -104,10 +104,10 @@ extern hv_uint32_t hv_min_max_log2(hv_uint32_t x);
 
 // SIMD
 #ifndef HV_SIMD_NONE
-  #define HV_SIMD_NEON __ARM_NEON__
-  #define HV_SIMD_SSE (__SSE__ && __SSE2__ && __SSE3__ && __SSSE3__ && __SSE4_1__)
-  #define HV_SIMD_AVX (__AVX__ && HV_SIMD_SSE) // it is required that if AVX exists then SSE will also be available
-  #define HV_SIMD_FMA __FMA__
+#define HV_SIMD_NEON __ARM_NEON__
+#define HV_SIMD_SSE (__SSE__ && __SSE2__ && __SSE3__ && __SSSE3__ && __SSE4_1__)
+#define HV_SIMD_AVX (__AVX__ && HV_SIMD_SSE) // it is required that if AVX exists then SSE will also be available
+#define HV_SIMD_FMA __FMA__
 #endif
 
 #ifdef HV_WIN
