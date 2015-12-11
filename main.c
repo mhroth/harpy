@@ -124,16 +124,16 @@ static void *network_run(void *x) {
           tosc_parseBundle(&bundle, buffer, len);
           const uint64_t timetag = tosc_getTimetag(&bundle);
           // all bundle message are executed simultaneously in heavy
-          pthread_mutex_lock(m->lock);
+          pthread_mutex_lock(&m->lock);
           while (tosc_getNextMessage(&bundle, &osc)) {
             handleOscMessage(&osc, timetag, m);
           }
-          pthread_mutex_unlock(m->lock);
+          pthread_mutex_unlock(&m->lock);
         } else {
           tosc_parseMessage(&osc, buffer, len);
-          pthread_mutex_lock(m->lock);
+          pthread_mutex_lock(&m->lock);
           handleOscMessage(&osc, 0L, m);
-          pthread_mutex_unlock(m->lock);
+          pthread_mutex_unlock(&m->lock);
         }
       }
     }
