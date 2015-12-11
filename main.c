@@ -1,15 +1,14 @@
 /* Copyright (c) 2015, Martin Roth (mhroth@gmail.com). All Rights Reserved. */
 
-#include <alsa/asoundlib.h>  // alsa
-#include <arpa/inet.h>       // network
-#include <pthread.h>         // threads
-#include <stdatomic.h>
-#include <sys/socket.h>      // sockets
+#include <alsa/asoundlib.h> // alsa
+#include <arpa/inet.h>      // network
+#include <pthread.h>        // threads
+#include <sys/socket.h>     // sockets
 #include <stdio.h>
 #include <sys/time.h>
 #include <signal.h>
 #include <string.h>
-#include <unistd.h>          // close
+#include <unistd.h>         // close
 #include <ifaddrs.h>
 
 #include "tinyosc/tinyosc.h" // OSC support
@@ -20,7 +19,8 @@
 #define SAMPLE_RATE 48000
 #define BLOCK_SIZE 256
 #define NUM_OUTPUT_CHANNELS 2
-#define SEC_TO_NS 1000000000L
+#define SEC_TO_NS_L 1000000000L
+#define SEC_TO_NS_D 1000000000.0
 
 #define ALSA_DEVICE "plughw:CARD=ALSA,DEV=0"
 
@@ -34,7 +34,7 @@ static void sigintHandler(int x) {
 static void timespec_subtract(struct timespec *result, struct timespec *end, struct timespec *start) {
   if (end->tv_nsec < start->tv_nsec) {
     result->tv_sec = end->tv_sec - start->tv_sec - 1;
-    result->tv_nsec = SEC_TO_NS + end->tv_nsec - start->tv_nsec;
+    result->tv_nsec = SEC_TO_NS_L + end->tv_nsec - start->tv_nsec;
   } else {
     result->tv_sec = end->tv_sec - start->tv_sec;
     result->tv_nsec = end->tv_nsec - start->tv_nsec;
@@ -43,7 +43,7 @@ static void timespec_subtract(struct timespec *result, struct timespec *end, str
 
 static void hv_printHook(
     double timestamp, const char *name, const char *s, void *userData) {
-  printf("[@h %.3fms] %s: %s\n", timestamp, name, s);
+  printf("[%.3fms] %s: %s\n", timestamp, name, s);
 }
 
 static void hv_sendHook(double timestamp, const char *receiverName,
@@ -60,7 +60,7 @@ static void printIpForInterface(const char *ifName) {
       if (ifa->ifa_addr->sa_family == AF_INET) {
         struct sockaddr_in *sa = (struct sockaddr_in *) ifa->ifa_addr;
         inet_ntop(AF_INET, &(sa->sin_addr), host, INET_ADDRSTRLEN);
-        printf("r.pistorius listening on osc://%s:9000\n", host);
+        printf("harpy is listening on osc.udp://%s:9000\n", host);
         break;
       }
     }
@@ -166,7 +166,7 @@ int main() {
       NUM_OUTPUT_CHANNELS, // stereo output
       SAMPLE_RATE, // 48KHz sampling rate
       1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
-      (unsigned int) ((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE)); // required overall latency in us
+      (unsigned int) (SEC_TO_NS_D*BLOCK_SIZE/SAMPLE_RATE)); // required overall latency in us
 
   {
     snd_pcm_uframes_t buffer_size;
@@ -210,10 +210,10 @@ int main() {
 #if PRINT_PERF
     struct timespec diff_tock;
     timespec_subtract(&diff_tock, &tock, &tick);
-    const int64_t elapsed_ns = (((int64_t) diff_tock.tv_sec) * SEC_TO_NS) + diff_tock.tv_nsec;
+    const int64_t elapsed_ns = (((int64_t) diff_tock.tv_sec) * SEC_TO_NS_L) + diff_tock.tv_nsec;
     printf("%llins (%0.3f%%CPU)\n",
         elapsed_ns,
-        100.0*elapsed_ns/((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE));
+        100.0*elapsed_ns/(SEC_TO_NS_D*BLOCK_SIZE/SAMPLE_RATE));
 #endif // PRINT_PERF
 
     snd_pcm_sframes_t frames = snd_pcm_writen(alsa, (void **) audioBuffer, BLOCK_SIZE);
