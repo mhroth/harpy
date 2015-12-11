@@ -75,21 +75,19 @@ typedef struct Modules {
 
 static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
   if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
-    pthread_mutex_lock(&m->lock);
     hv_sendFloatToReceiver(m->mods[0], "freq", tosc_getNextFloat(osc));
-    pthread_mutex_unlock(&m->lock);
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
     if (!strcmp(tosc_getNextString(osc), "quit")) {
-      sigintHandler(0);
+      sigintHandler(SIGINT);
     }
   } else {
-    printf("Unknown message: ");
-    tosc_printMessage(osc);
+    printf("Unknown message: "); tosc_printMessage(osc);
   }
 }
 
 // the network thread
 static void *network_run(void *x) {
+  assert(x != NULL);
   Modules *m = (Modules *) x;
 
   struct sockaddr_in sin;
@@ -121,16 +119,21 @@ static void *network_run(void *x) {
 
     // listen to the socket for any responses
     if (select(fd_receive+1, &rfds, NULL, NULL, &tv) > 0) {
-      while ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
+      if ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
         if (tosc_isBundle(buffer)) {
           tosc_parseBundle(&bundle, buffer, len);
           const uint64_t timetag = tosc_getTimetag(&bundle);
+          // all bundle message are executed simultaneously in heavy
+          pthread_mutex_lock(m->lock);
           while (tosc_getNextMessage(&bundle, &osc)) {
             handleOscMessage(&osc, timetag, m);
           }
+          pthread_mutex_unlock(m->lock);
         } else {
           tosc_parseMessage(&osc, buffer, len);
+          pthread_mutex_lock(m->lock);
           handleOscMessage(&osc, 0L, m);
+          pthread_mutex_unlock(m->lock);
         }
       }
     }
@@ -164,7 +167,7 @@ int main() {
       SAMPLE_RATE, // 48KHz sampling rate
       1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
       (unsigned int) ((SEC_TO_NS/((double) SAMPLE_RATE))*BLOCK_SIZE)); // required overall latency in us
-  
+
   {
     snd_pcm_uframes_t buffer_size;
     snd_pcm_uframes_t period_size;
