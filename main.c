@@ -22,7 +22,7 @@
 #define SEC_TO_NS_L 1000000000L
 #define SEC_TO_NS_D 1000000000.0
 
-#define ALSA_DEVICE "plughw:CARD=ALSA,DEV=0"
+#define ALSA_DEVICE "sysdefault:CARD=sndrpihifiberry"
 
 static volatile bool _keepRunning = true;
 
@@ -165,14 +165,14 @@ int main() {
       SND_PCM_ACCESS_RW_NONINTERLEAVED,
       NUM_OUTPUT_CHANNELS, // stereo output
       SAMPLE_RATE, // 48KHz sampling rate
-      1,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
-      (unsigned int) (SEC_TO_NS_D*BLOCK_SIZE/SAMPLE_RATE)); // required overall latency in us
+      0,           // 0 = disallow alsa-lib resample stream, 1 = allow resampling
+      (unsigned int) (1000000.0*BLOCK_SIZE/SAMPLE_RATE)); // required overall latency in us
 
   {
     snd_pcm_uframes_t buffer_size;
     snd_pcm_uframes_t period_size;
     snd_pcm_get_params(alsa, &buffer_size, &period_size);
-    printf("ALSA:\n  buffer size: %lu\n  period size: %lu\n", buffer_size, period_size);
+    printf("ALSA:\n  * buffer size: %lu\n  * period size: %lu\n", buffer_size, period_size);
   }
 
   // initialise all heavy slots
