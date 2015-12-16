@@ -10,8 +10,10 @@
 #include <string.h>
 #include <unistd.h>         // close
 #include <ifaddrs.h>
+#include <sys/stat.h>       // stat
 
 #include "tinyosc/tinyosc.h" // OSC support
+#include "oscbuffer.h"
 
 // heavy slots
 #include "heavy/rpis_osc/Heavy_rpis_osc.h"
@@ -19,12 +21,19 @@
 #define SAMPLE_RATE 48000
 #define BLOCK_SIZE 256
 #define NUM_OUTPUT_CHANNELS 2
-#define SEC_TO_NS_L 1000000000L
-#define SEC_TO_NS_D 1000000000.0
 
 #define ALSA_DEVICE "sysdefault:CARD=sndrpihifiberry"
 
 static volatile bool _keepRunning = true;
+
+typedef struct {
+  void *mods[4];
+  OscBuffer oscBuffer;
+  pthread_mutex_t lock;
+} Modules;
+
+// forward function declarations
+static void handleOscBuffer(char *buffer, int len, Modules *m);
 
 // http://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
 static void sigintHandler(int x) {
@@ -34,7 +43,7 @@ static void sigintHandler(int x) {
 static void timespec_subtract(struct timespec *result, struct timespec *end, struct timespec *start) {
   if (end->tv_nsec < start->tv_nsec) {
     result->tv_sec = end->tv_sec - start->tv_sec - 1;
-    result->tv_nsec = SEC_TO_NS_L + end->tv_nsec - start->tv_nsec;
+    result->tv_nsec = 1000000000L + end->tv_nsec - start->tv_nsec;
   } else {
     result->tv_sec = end->tv_sec - start->tv_sec;
     result->tv_nsec = end->tv_nsec - start->tv_nsec;
@@ -48,7 +57,17 @@ static void hv_printHook(
 
 static void hv_sendHook(double timestamp, const char *receiverName,
     const HvMessage *m, void *userData) {
-  // TODO(mhroth)
+  Modules *mods = (Modules *) userData;
+
+  // respond to an indication that the clip is over and should be restarted
+  if (!strcmp(receiverName, "tr_rpi")) {
+    char *buffer = NULL;
+    uint32_t len = 0;
+    oscbuffer_resetIterator(&mods->oscBuffer);
+    while ((buffer = oscbuffer_getNextBuffer(&mods->oscBuffer, &len)) != NULL) {
+      handleOscBuffer(buffer, len, mods);
+    }
+  }
 }
 
 static void printIpForInterface(const char *ifName) {
@@ -68,20 +87,43 @@ static void printIpForInterface(const char *ifName) {
   freeifaddrs(ifaddr);
 }
 
-typedef struct Modules {
-  void *mods[4];
-  pthread_mutex_t lock;
-} Modules;
-
 static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
   if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
-    hv_sendFloatToReceiver(m->mods[0], "freq", tosc_getNextFloat(osc));
+    // calculate delay in seconds, according to timetag format
+    double delay = 0.0;
+    if (timetag != TINYOSC_TIMETAG_IMMEDIATELY) {
+      double delay = (double) (timetag >> 32); // seconds
+      delay += ((timetag & 0xFFFFFFFFL) / 4294967296.0); // fractions of second
+    }
+    hv_vscheduleMessageForReceiver(m->mods[0], "freq", delay*1000.0, "f",
+        tosc_getNextFloat(osc));
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
     if (!strcmp(tosc_getNextString(osc), "quit")) {
       sigintHandler(SIGINT);
     }
   } else {
     printf("Unknown message: "); tosc_printMessage(osc);
+  }
+}
+
+static void handleOscBuffer(char *buffer, int len, Modules *m) {
+  if (tosc_isBundle(buffer)) {
+    tosc_bundle bundle;
+    tosc_message osc;
+    tosc_parseBundle(&bundle, buffer, len);
+    const uint64_t timetag = tosc_getTimetag(&bundle);
+    // all bundle message are executed simultaneously in heavy
+    pthread_mutex_lock(&m->lock);
+    while (tosc_getNextMessage(&bundle, &osc)) {
+      handleOscMessage(&osc, timetag, m);
+    }
+    pthread_mutex_unlock(&m->lock);
+  } else {
+    tosc_message osc;
+    tosc_parseMessage(&osc, buffer, len);
+    pthread_mutex_lock(&m->lock);
+    handleOscMessage(&osc, TINYOSC_TIMETAG_IMMEDIATELY, m);
+    pthread_mutex_unlock(&m->lock);
   }
 }
 
@@ -103,9 +145,6 @@ static void *network_run(void *x) {
   bind(fd_receive, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
   printIpForInterface("eth0");
 
-  tosc_bundle bundle;
-  tosc_message osc;
-
   while (_keepRunning) {
     // set up structs for select
     fd_set rfds;
@@ -120,21 +159,7 @@ static void *network_run(void *x) {
     if (select(fd_receive+1, &rfds, NULL, NULL, &tv) > 0) {
       size_t sa_len = sizeof(struct sockaddr_in);
       if ((len = recvfrom(fd_receive, buffer, sizeof(buffer), 0, (struct sockaddr *) &sin, (socklen_t *) &sa_len)) > 0) {
-        if (tosc_isBundle(buffer)) {
-          tosc_parseBundle(&bundle, buffer, len);
-          const uint64_t timetag = tosc_getTimetag(&bundle);
-          // all bundle message are executed simultaneously in heavy
-          pthread_mutex_lock(&m->lock);
-          while (tosc_getNextMessage(&bundle, &osc)) {
-            handleOscMessage(&osc, timetag, m);
-          }
-          pthread_mutex_unlock(&m->lock);
-        } else {
-          tosc_parseMessage(&osc, buffer, len);
-          pthread_mutex_lock(&m->lock);
-          handleOscMessage(&osc, 0L, m);
-          pthread_mutex_unlock(&m->lock);
-        }
+        handleOscBuffer(buffer, len, m);
       }
     }
   }
@@ -159,7 +184,7 @@ int main() {
   // setup sound output
   // list all devices: $ aplay -L
   snd_pcm_t *alsa;
-  snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0); // 0 > blocking
+  snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
   snd_pcm_set_params(alsa,
       SND_PCM_FORMAT_FLOAT_LE ,
       SND_PCM_ACCESS_RW_NONINTERLEAVED,
@@ -169,23 +194,33 @@ int main() {
       (unsigned int) (1000000.0*BLOCK_SIZE/SAMPLE_RATE)); // required overall latency in us
 
   {
-    snd_pcm_uframes_t buffer_size;
-    snd_pcm_uframes_t period_size;
+    snd_pcm_uframes_t buffer_size = 0;
+    snd_pcm_uframes_t period_size = 0;
     snd_pcm_get_params(alsa, &buffer_size, &period_size);
-    printf("ALSA:\n  * buffer size: %lu\n  * period size: %lu\n", buffer_size, period_size);
+    printf("ALSA:\n  * buffer size: %lu\n  * period size: %lu\n",
+        buffer_size, period_size);
   }
 
   // initialise all heavy slots
   m.mods[0] = hv_rpis_osc_new(SAMPLE_RATE);
+  assert(hv_getNumOutputChannels(m.mods[0]) == NUM_OUTPUT_CHANNELS);
   hv_setPrintHook(m.mods[0], &hv_printHook);
   hv_setSendHook(m.mods[0], &hv_sendHook);
-  assert(hv_getNumOutputChannels(m.mods[0]) == NUM_OUTPUT_CHANNELS);
-/*
-  Hv_mixer *hv_mixer = hv_mixer_new(SAMPLE_RATE);
-  hv_setPrintHook(hv_mixer, &hv_printHook);
-  hv_setSendHook(hv_mixer, &hv_sendHook);
-  assert(hv_getNumOutputChannels(hv_mixer) == NUM_OUTPUT_CHANNELS);
-*/
+  hv_setUserData(m.mods[0], &m);
+
+  // read osc buffers from file
+  {
+    struct stat st;
+    stat("drums.mid.osc", &st);
+    oscbuffer_init(&m.oscBuffer, st.st_size);
+
+    FILE *pFile = fopen("drums.mid.osc","rb");
+    if (pFile != NULL) {
+      fread(oscbuffer_getBuffer(&m.oscBuffer), st.st_size, st.st_size, pFile);
+      fclose(pFile);
+    }
+  }
+
   // create and start the network thread
   // https://computing.llnl.gov/tutorials/pthreads/
   pthread_t networkThread = 0;
@@ -201,25 +236,21 @@ int main() {
     clock_gettime(CLOCK_REALTIME, &tick);
     pthread_mutex_lock(&m.lock);
     hv_rpis_osc_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[1], NULL, audioBuffer+(1 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[2], NULL, audioBuffer+(2 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
-    // hv_bass_process_inline(m.mods[3], NULL, audioBuffer+(3 * NUM_OUTPUT_CHANNELS), BLOCK_SIZE);
-    // hv_mixer_process_inline(hv_mixer, audioBuffer, audioBuffer, BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tock);
 #if PRINT_PERF
     struct timespec diff_tock;
     timespec_subtract(&diff_tock, &tock, &tick);
-    const int64_t elapsed_ns = (((int64_t) diff_tock.tv_sec) * SEC_TO_NS_L) + diff_tock.tv_nsec;
+    const int64_t elapsed_ns = (((int64_t) diff_tock.tv_sec) * 1000000000L) + diff_tock.tv_nsec;
     printf("%llins (%0.3f%%CPU)\n",
         elapsed_ns,
-        100.0*elapsed_ns/(SEC_TO_NS_D*BLOCK_SIZE/SAMPLE_RATE));
+        100.0*elapsed_ns/(1000000000.0*BLOCK_SIZE/SAMPLE_RATE));
 #endif // PRINT_PERF
 
     snd_pcm_sframes_t frames = snd_pcm_writen(alsa, (void **) audioBuffer, BLOCK_SIZE);
     if (frames < 0) {
       frames = snd_pcm_recover(alsa, frames, 0);
-      if (frames < 0) printf("ALSA: snd_pcm_writen failed: %s\n", snd_strerror(frames));
+      if (frames < 0) printf("ALSA: %s\n", snd_strerror(frames));
     }
   }
 
@@ -234,7 +265,6 @@ int main() {
 
   // free heavy slots
   hv_rpis_osc_free(m.mods[0]);
-  // hv_mixer_free(hv_mixer);
 
   return 0;
 }
