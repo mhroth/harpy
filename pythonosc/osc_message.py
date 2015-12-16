@@ -47,6 +47,8 @@ class OscMessage(object):
           val = True
         elif param == "F": # False.
           val = False
+        if param == "m":  # MIDI.
+          val, index = osc_types.get_midi(self._dgram, index)
         # TODO: Support more exotic types as described in the specification.
         else:
           logging.warning('Unhandled parameter type: {0}'.format(param))

@@ -90,6 +90,11 @@ int32_t tosc_getNextInt32(tosc_message *o);
 int64_t tosc_getNextInt64(tosc_message *o);
 
 /**
+ * Returns the next 64-bit timetag. Does not check buffer bounds.
+ */
+uint64_t tosc_getNextTimetag(tosc_message *o);
+
+/**
  * Returns the next 32-bit float. Does not check buffer bounds.
  */
 float tosc_getNextFloat(tosc_message *o);
@@ -110,6 +115,12 @@ const char *tosc_getNextString(tosc_message *o);
  * Returns NULL and 0 if the OSC buffer bounds are exceeded.
  */
 void tosc_getNextBlob(tosc_message *o, const char **buffer, int *len);
+
+/**
+ * Returns the next set of midi bytes. Does not check bounds.
+ * Bytes from MSB to LSB are: port id, status byte, data1, data2.
+ */
+char *tosc_getNextMidi(tosc_message *o);
 
 /**
  * Parse a buffer containing an OSC message.
