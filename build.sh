@@ -1,6 +1,6 @@
 #!/bin/bash
 
-clang main.c tinyosc/*.c \
+clang main.c oscbuffer.c tinyosc/*.c \
 ./heavy/static/*.c ./heavy/rpis_osc/*.c \
 -I./heavy/static \
 -std=c11 \
