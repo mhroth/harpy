@@ -32,9 +32,9 @@
 int tosc_parseMessage(tosc_message *o, char *buffer, const int len) {
   // NOTE(mhroth): if there's a comma in the address, that's weird
   int i = 0;
-  while (i < len && buffer[i] != ',') ++i; // find the format comma
-  // TODO(mhroth): does not check for null terminated address string
-  if (i == len) return -1; // error while looking for format string
+  while (buffer[i] != '\0') ++i; // find the null-terimated address
+  while (buffer[i] != ',') ++i; // find the comma which starts the format string
+  if (i >= len) return -1; // error while looking for format string
   // format string is null terminated
   o->format = buffer + i + 1; // format starts after comma
 
@@ -103,6 +103,10 @@ int64_t tosc_getNextInt64(tosc_message *o) {
   return i;
 }
 
+uint64_t tosc_getNextTimetag(tosc_message *o) {
+  return (uint64_t) tosc_getNextInt64(o);
+}
+
 float tosc_getNextFloat(tosc_message *o) {
   // convert from big-endian (network btye order)
   const uint32_t i = ntohl(*((uint32_t *) o->marker));
@@ -136,6 +140,12 @@ void tosc_getNextBlob(tosc_message *o, const char **buffer, int *len) {
     *len = 0;
     *buffer = NULL;
   }
+}
+
+char *tosc_getNextMidi(tosc_message *o) {
+  char *m = o->marker;
+  o->marker += 4;
+  return m;
 }
 
 void tosc_writeBundle(tosc_bundle *b, uint64_t timetag, char *buffer, const int len) {
@@ -194,6 +204,14 @@ static uint32_t tosc_vwrite(char *buffer, const int len,
         i += 4;
         break;
       }
+      case 'm': {
+        if (i + 4 > len) return -3;
+        const uint32_t k = (uint32_t) va_arg(ap, int);
+        *((uint32_t *) (buffer+i)) = htonl(k);
+        i += 4;
+        break;
+      }
+      case 't'
       case 'h': {
         if (i + 8 > len) return -3;
         const uint64_t k = (uint64_t) va_arg(ap, long long);
@@ -269,10 +287,16 @@ void tosc_printMessage(tosc_message *osc) {
         for (int j = 0; j < n; ++j) printf("%02X", b[j] & 0xFF); // print blob bytes
         break;
       }
+      case 'm': {
+        char *m = tosc_getNextMidi(osc);
+        printf(" midi:%02X%02X%02X%02X", m[0], m[1], m[2], m[3])
+        break;
+      }
       case 'f': printf(" %g", tosc_getNextFloat(osc)); break;
       case 'd': printf(" %g", tosc_getNextDouble(osc)); break;
       case 'i': printf(" %d", tosc_getNextInt32(osc)); break;
       case 'h': printf(" %lld", tosc_getNextInt64(osc)); break;
+      case 't': printf(" %lld", tosc_getNextTimetag(osc)); break;
       case 's': printf(" %s", tosc_getNextString(osc)); break;
       case 'F': printf(" false"); break;
       case 'I': printf(" inf"); break;
