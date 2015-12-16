@@ -20,6 +20,7 @@ IMMEDIATELY = 0
 # Datagram length in bytes for types that have a fixed size.
 _INT_DGRAM_LEN = 4
 _FLOAT_DGRAM_LEN = 4
+_MIDI_DGRAM_LEN = 4
 _DATE_DGRAM_LEN = _INT_DGRAM_LEN * 2
 # Strings and blob dgram length is always a multiple of 4 bytes.
 _STRING_DGRAM_PAD = 4
@@ -101,7 +102,6 @@ def write_int(val):
   except struct.error as e:
     raise BuildError('Wrong argument value passed: {}'.format(e))
 
-
 def get_int(dgram, start_index):
   """Get a 32-bit big-endian two's complement integer from the datagram.
 
@@ -131,6 +131,22 @@ def get_uint(dgram, start_index):
     return (
         struct.unpack('>I', dgram[start_index:start_index + _INT_DGRAM_LEN])[0],
         start_index + _INT_DGRAM_LEN)
+  except (struct.error, TypeError) as e:
+    raise ParseError('Could not parse datagram %s' % e)
+
+def write_midi(val):
+  try:
+    return struct.pack('>I', val)
+  except struct.error as e:
+    raise BuildError('Wrong argument value passed: {}'.format(e))
+
+def get_midi(dgram, start_index):
+  try:
+    if len(dgram[start_index:]) < _MIDI_DGRAM_LEN:
+      raise ParseError('Datagram is too short')
+    return (
+        struct.unpack('>I', dgram[start_index:start_index + _INT_DGRAM_LEN])[0],
+        start_index + _MIDI_DGRAM_LEN)
   except (struct.error, TypeError) as e:
     raise ParseError('Could not parse datagram %s' % e)
 

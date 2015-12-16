@@ -23,9 +23,10 @@ class OscMessageBuilder(object):
   ARG_TYPE_BLOB = "b"
   ARG_TYPE_TRUE = "T"
   ARG_TYPE_FALSE = "F"
+  ARG_TYPE_MIDI = "m"
 
   _SUPPORTED_ARG_TYPES = (
-      ARG_TYPE_FLOAT, ARG_TYPE_INT, ARG_TYPE_BLOB, ARG_TYPE_STRING, ARG_TYPE_TRUE, ARG_TYPE_FALSE)
+      ARG_TYPE_FLOAT, ARG_TYPE_INT, ARG_TYPE_BLOB, ARG_TYPE_STRING, ARG_TYPE_TRUE, ARG_TYPE_FALSE, ARG_TYPE_MIDI)
 
   def __init__(self, address=None):
     """Initialize a new builder for a message.
@@ -113,6 +114,8 @@ class OscMessageBuilder(object):
           dgram += osc_types.write_blob(value)
         elif arg_type == self.ARG_TYPE_TRUE or arg_type == self.ARG_TYPE_FALSE:
           continue
+        elif arg_type == self.ARG_TYPE_MIDI:
+          dgram += osc_types.write_midi(value)
         else:
           raise BuildError('Incorrect parameter type found {}'.format(
               arg_type))
