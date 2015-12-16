@@ -40,7 +40,7 @@ class OscBundleBuilder(object):
     Raises:
       - BuildError: if we could not build the bundle.
     """
-    dgram = b'#bundle\x00'
+    dgram = bytearray('#bundle\x00')
     try:
       dgram += osc_types.write_date(self._timestamp)
       for content in self._contents:

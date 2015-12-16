@@ -119,12 +119,20 @@ def get_int(dgram, start_index):
     if len(dgram[start_index:]) < _INT_DGRAM_LEN:
       raise ParseError('Datagram is too short')
     return (
-        struct.unpack('>i',
-                      dgram[start_index:start_index + _INT_DGRAM_LEN])[0],
+        struct.unpack('>i', dgram[start_index:start_index + _INT_DGRAM_LEN])[0],
         start_index + _INT_DGRAM_LEN)
   except (struct.error, TypeError) as e:
     raise ParseError('Could not parse datagram %s' % e)
 
+def get_uint(dgram, start_index):
+  try:
+    if len(dgram[start_index:]) < _INT_DGRAM_LEN:
+      raise ParseError('Datagram is too short')
+    return (
+        struct.unpack('>I', dgram[start_index:start_index + _INT_DGRAM_LEN])[0],
+        start_index + _INT_DGRAM_LEN)
+  except (struct.error, TypeError) as e:
+    raise ParseError('Could not parse datagram %s' % e)
 
 def write_float(val):
   """Returns the datagram for the given float parameter value
@@ -231,8 +239,8 @@ def get_date(dgram, start_index):
     return IMMEDIATELY, start_index + _DATE_DGRAM_LEN
   if len(dgram[start_index:]) < _DATE_DGRAM_LEN:
     raise ParseError('Datagram is too short')
-  num_secs, start_index = get_int(dgram, start_index)
-  fraction, start_index = get_int(dgram, start_index)
+  num_secs, start_index = get_uint(dgram, start_index)
+  fraction, start_index = get_uint(dgram, start_index)
   # Get a decimal representation from those two values.
   dec = decimal.Decimal(str(num_secs) + '.' + str(fraction))
   # And convert it to float simply.
@@ -243,6 +251,8 @@ def get_date(dgram, start_index):
 def write_date(system_time):
   if system_time == IMMEDIATELY:
     return ntp.IMMEDIATELY
+  elif isinstance(system_time,int):
+    return struct.pack('>Q', system_time)
 
   try:
     return ntp.system_time_to_ntp(system_time)
