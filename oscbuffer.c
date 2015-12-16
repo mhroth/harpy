@@ -1,5 +1,6 @@
 /* Copyright (c) 2015, Martin Roth (mhroth@gmail.com). All Rights Reserved. */
 
+#include <endian.h>
 #include "oscbuffer.h"
 
 void oscbuffer_init(OscBuffer *o, uint32_t numBytes) {
@@ -26,7 +27,7 @@ void oscbuffer_resetIterator(OscBuffer *o) {
 
 char *oscbuffer_getNextBuffer(OscBuffer *o, uint32_t *len) {
   if (o->iterator - o->buffer < o->len) {
-    const uint32_t l = *((uint32_t *) o->iterator);
+    const uint32_t l = be32toh(*((uint32_t *) o->iterator));
     *len = l;
     char *const b = o->iterator + 4;
     o->iterator += (4 + l);
@@ -39,7 +40,7 @@ char *oscbuffer_getNextBuffer(OscBuffer *o, uint32_t *len) {
 
 bool oscbuffer_addBuffer(OscBuffer *o, const char *buffer, uint32_t len) {
   if (o->marker + len + 4 - o->buffer < o->len) {
-    *((uint32_t *) o->marker) = len;
+    *((uint32_t *) o->marker) = htobe32(len);
     memcpy(o->marker+4, buffer, len);
     return true;
   } else {

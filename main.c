@@ -57,10 +57,10 @@ static void hv_printHook(
 
 static void hv_sendHook(double timestamp, const char *receiverName,
     const HvMessage *m, void *userData) {
-  Modules *mods = (Modules *) userData;
+  Modules *const mods = (Modules *) userData;
 
   // respond to an indication that the clip is over and should be restarted
-  if (!strcmp(receiverName, "tr_rpi")) {
+  if (!strcmp(receiverName, "harpy")) {
     char *buffer = NULL;
     uint32_t len = 0;
     oscbuffer_resetIterator(&mods->oscBuffer);
@@ -92,7 +92,7 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules 
     // calculate delay in seconds, according to timetag format
     double delay = 0.0;
     if (timetag != TINYOSC_TIMETAG_IMMEDIATELY) {
-      double delay = (double) (timetag >> 32); // seconds
+      delay = (double) (timetag >> 32); // seconds
       delay += ((timetag & 0xFFFFFFFFL) / 4294967296.0); // fractions of second
     }
     hv_vscheduleMessageForReceiver(m->mods[0], "freq", delay*1000.0, "f",
@@ -210,15 +210,24 @@ int main() {
 
   // read osc buffers from file
   {
-    struct stat st;
-    stat("drums.mid.osc", &st);
-    oscbuffer_init(&m.oscBuffer, st.st_size);
+    const char *filename = "drums.mid.osc";
 
-    FILE *pFile = fopen("drums.mid.osc","rb");
+    struct stat st;
+    stat(filename, &st);
+    oscbuffer_init(&m.oscBuffer, st.st_size);
+    printf("Loading drums.mid.osc: %li bytes\n", st.st_size);
+
+    FILE *pFile = fopen(filename, "rb");
     if (pFile != NULL) {
-      fread(oscbuffer_getBuffer(&m.oscBuffer), st.st_size, st.st_size, pFile);
+      char *buffer = oscbuffer_getBuffer(&m.oscBuffer);
+      fread(buffer, st.st_size, st.st_size, pFile); // read the whole file
       fclose(pFile);
+    } else {
+      printf("Could not read osc file %s.\n", filename);
     }
+
+    // dump all of the oscbuffer messages into the patch
+    hv_sendHook(0.0, "harpy", NULL, &m);
   }
 
   // create and start the network thread
