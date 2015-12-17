@@ -142,8 +142,8 @@ void tosc_getNextBlob(tosc_message *o, const char **buffer, int *len) {
   }
 }
 
-char *tosc_getNextMidi(tosc_message *o) {
-  char *m = o->marker;
+unsigned char *tosc_getNextMidi(tosc_message *o) {
+  unsigned char *m = (unsigned char *) o->marker;
   o->marker += 4;
   return m;
 }
@@ -288,8 +288,8 @@ void tosc_printMessage(tosc_message *osc) {
         break;
       }
       case 'm': {
-        char *m = tosc_getNextMidi(osc);
-        printf(" midi:%02X%02X%02X%02X", m[0], m[1], m[2], m[3]);
+        unsigned char *m = tosc_getNextMidi(osc);
+        printf(" 0x%02X%02X%02X%02X", m[0], m[1], m[2], m[3]);
         break;
       }
       case 'f': printf(" %g", tosc_getNextFloat(osc)); break;

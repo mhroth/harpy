@@ -16,6 +16,8 @@
 
 #include "SignalPhasor.h"
 
+#define HV_PHASOR_2_32 4294967296.0
+
 #if HV_SIMD_AVX
 static void sPhasor_updatePhase(SignalPhasor *o, float p) {
   o->phase = _mm256_set_ps(p+1.0f); // o->phase is in range [1,2]
@@ -61,15 +63,15 @@ static void sPhasor_k_updateFrequency(SignalPhasor *o, float f, double r) {
   o->inc = _mm256_set1_ps((float) (8.0f*f/r));
   sPhasor_k_updatePhase(o, o->phase[0]);
 #elif HV_SIMD_SSE
-  o->step.s = (hv_int32_t) (f*(4294967296.0/r));
+  o->step.s = (hv_int32_t) (f*(HV_PHASOR_2_32/r));
   o->inc = _mm_set1_epi32(4*o->step.s);
   sPhasor_k_updatePhase(o, (hv_uint32_t) (o->phase[0] & 0xFFFFFFFFL));
 #elif HV_SIMD_NEON
-  o->step.s = (hv_int32_t) (f*(4294967296.0/r));
+  o->step.s = (hv_int32_t) (f*(HV_PHASOR_2_32/r));
   o->inc = vdupq_n_s32(4*o->step.s);
   sPhasor_k_updatePhase(o, vgetq_lane_u32(o->phase, 0));
 #else // HV_SIMD_NONE
-  o->step.s = (hv_int32_t) (f*(4294967296.0/r));
+  o->step.s = (hv_int32_t) (f*(HV_PHASOR_2_32/r));
   o->inc = o->step.s;
   // no need to update phase
 #endif
@@ -83,15 +85,15 @@ hv_size_t sPhasor_init(SignalPhasor *o, double samplerate) {
 #elif HV_SIMD_SSE
   o->phase = _mm_setzero_si128();
   o->inc = _mm_setzero_si128();
-  o->step.f2sc = (float) (4294967296.0/samplerate);
+  o->step.f2sc = (float) (HV_PHASOR_2_32/samplerate);
 #elif HV_SIMD_NEON
   o->phase = vdupq_n_u32(0);
   o->inc = vdupq_n_s32(0);
-  o->step.f2sc = (float) (4294967296.0/samplerate);
+  o->step.f2sc = (float) (HV_PHASOR_2_32/samplerate);
 #else // HV_SIMD_NONE
   o->phase = 0;
   o->inc = 0;
-  o->step.f2sc = (float) (4294967296.0/samplerate);
+  o->step.f2sc = (float) (HV_PHASOR_2_32/samplerate);
 #endif
   return 0;
 }
@@ -99,13 +101,13 @@ hv_size_t sPhasor_init(SignalPhasor *o, double samplerate) {
 void sPhasor_onMessage(HvBase *_c, SignalPhasor *o, int letIn, const HvMessage *m) {
   if (letIn == 1) {
     if (msg_isFloat(m,0)) {
-      float phase = msg_getFloat(m,0);
-      while (phase < 0.0f) phase += 1.0f; // wrap phase to [0,1]
-      while (phase > 1.0f) phase -= 1.0f;
+      float p = msg_getFloat(m,0);
+      while (p < 0.0f) p += 1.0f; // wrap phase to [0,1]
+      while (p > 1.0f) p -= 1.0f;
 #if HV_SIMD_AVX
-      sPhasor_updatePhase(o, phase);
+      sPhasor_updatePhase(o, p);
 #else // HV_SIMD_SSE || HV_SIMD_NEON || HV_SIMD_NONE
-      sPhasor_updatePhase(o, (hv_uint32_t) (phase * 4294967296.0));
+      sPhasor_updatePhase(o, (hv_uint32_t) (p * HV_PHASOR_2_32));
 #endif
     }
   }
@@ -122,13 +124,13 @@ void sPhasor_k_onMessage(HvBase *_c, SignalPhasor *o, int letIn, const HvMessage
     switch (letIn) {
       case 0: sPhasor_k_updateFrequency(o, msg_getFloat(m,0), ctx_getSampleRate(_c)); break;
       case 1: {
-        float phase = msg_getFloat(m,0);
-        while (phase < 0.0f) phase += 1.0f; // wrap phase to [0,1]
-        while (phase > 1.0f) phase -= 1.0f;
+        float p = msg_getFloat(m,0);
+        while (p < 0.0f) p += 1.0f; // wrap phase to [0,1]
+        while (p > 1.0f) p -= 1.0f;
 #if HV_SIMD_AVX
-        sPhasor_k_updatePhase(o, phase);
+        sPhasor_k_updatePhase(o, p);
 #else // HV_SIMD_SSE || HV_SIMD_NEON || HV_SIMD_NONE
-        sPhasor_k_updatePhase(o, (hv_uint32_t) (phase * 4294967296.0));
+        sPhasor_k_updatePhase(o, (hv_uint32_t) (p * HV_PHASOR_2_32));
 #endif
         break;
       }

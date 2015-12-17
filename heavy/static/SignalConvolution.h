@@ -38,13 +38,13 @@ static inline void __hv_conv_f(SignalConvolution *o, hv_bInf_t bIn, hv_bOutf_t b
   hv_assert(hTable_getSize(&o->inputs) <= hTable_getSize(o->table));
 
 #if HV_SIMD_AVX
-#warning __hv_samphold_f() not implemented
+#warning __hv_conv_f() not implemented
   *bOut = bIn; // TODO(mhroth): for now pass through the input
 #elif HV_SIMD_SSE
-#warning __hv_samphold_f() not implemented
+#warning __hv_conv_f() not implemented
   *bOut = bIn; // TODO(mhroth): for now pass through the input
 #elif HV_SIMD_NEON
-#warning __hv_samphold_f() not implemented
+#warning __hv_conv_f() not implemented
   *bOut = bIn; // TODO(mhroth): for now pass through the input
 #else // HV_SIMD_NONE
   const hv_uint32_t s = hTable_getSize(&o->inputs) - 1;

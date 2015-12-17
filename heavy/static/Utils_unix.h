@@ -41,12 +41,15 @@
 
 // Memory management
 #define hv_alloca(_n) alloca(_n)
-#if HV_SIMD_AVX || HV_SIMD_SSE
-  #define hv_malloc(_n) _mm_malloc(_n, 32) // 32 to ensure AVX compatability (16 otherwise)
-  #define hv_free(x) _mm_free(x)
-#else
-  #define hv_malloc(_n) malloc(_n)
-  #define hv_free(_n) free(_n)
+#if HV_SIMD_AVX
+#define hv_malloc(_n) aligned_alloc(32, _n)
+#define hv_free(x) free(x)
+#elif HV_SIMD_SSE || HV_SIMD_NEON
+#define hv_malloc(_n) aligned_alloc(16, _n)
+#define hv_free(x) free(x)
+#else // HV_SIMD_NONE
+#define hv_malloc(_n) malloc(_n)
+#define hv_free(_n) free(_n)
 #endif
 #define hv_realloc(a, b) realloc(a, b)
 #define hv_memcpy(a, b, c) memcpy(a, b, c)

@@ -166,6 +166,11 @@ void hv_sendSymbolToReceiver(Heavy *c, const char *receiverName, char *s) {
 
 void hv_vscheduleMessageForReceiver(Heavy *c, const char *receiverName,
     const double delayMs, const char *format, ...) {
+  hv_assert(c != NULL);
+  hv_assert(receiverName != NULL);
+  hv_assert(delayMs >= 0.0);
+  hv_assert(format != NULL);
+
   va_list ap;
   va_start(ap, format);
 

@@ -38,9 +38,7 @@ typedef struct MessageQueue {
   MessagePool mp;
 } MessageQueue;
 
-hv_size_t mq_init(MessageQueue *q);
-
-void mq_initWithPoolSize(MessageQueue *q, hv_size_t poolSizeKB);
+hv_size_t mq_initWithPoolSize(MessageQueue *q, hv_size_t poolSizeKB);
 
 void mq_free(MessageQueue *q);
 
@@ -86,6 +84,6 @@ void mq_removeMessage(MessageQueue *q, HvMessage *m,
 void mq_clear(MessageQueue *q);
 
 /** Removes all messages occuring at or after the given timestamp. */
-void mq_clearAfter(MessageQueue *q, const double timestamp);
+void mq_clearAfter(MessageQueue *q, const hv_uint32_t timestamp);
 
 #endif // _MESSAGE_QUEUE_H_
