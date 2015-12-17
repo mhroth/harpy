@@ -88,15 +88,36 @@ static void printIpForInterface(const char *ifName) {
 }
 
 static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
-  if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
+  if (!strncmp(tosc_getAddress(osc), "/1", 2)) {
     // calculate delay in seconds, according to timetag format
     double delay = 0.0;
     if (timetag != TINYOSC_TIMETAG_IMMEDIATELY) {
       delay = (double) (timetag >> 32); // seconds
       delay += ((timetag & 0xFFFFFFFFL) / 4294967296.0); // fractions of second
     }
-    hv_vscheduleMessageForReceiver(m->mods[0], "freq", delay*1000.0, "f",
-        tosc_getNextFloat(osc));
+
+    if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
+      hv_vscheduleMessageForReceiver(m->mods[0], "freq", delay*1000.0, "f",
+          tosc_getNextFloat(osc));
+    } else if (!strcmp(tosc_getFormat(osc), "m")) {
+      // http://en.flossmanuals.net/pure-data/midi/using-midi/
+      const unsigned char *midi = tosc_getNextMidi(osc);
+      const unsigned char command = midi[1] & 0xF0;
+      if (command == 0x90 || command == 0x80) { // note on/off
+        hv_vscheduleMessageForReceiver(
+            m->mods[0], "__hv_notein", delay*1000.0, "fffff",
+            (float) midi[0],          // port
+            (float) command,          // command; e.g. note on/off
+            (float) (midi[1] & 0x0F), // channel
+            (float) midi[2],          // data[0]; pitch
+            (float) midi[3]);         // data[1]; velocity
+
+        // for testing
+        hv_vscheduleMessageForReceiver(m->mods[0], "#HV_IN", delay*1000.0, "b");
+      }
+    } else {
+      printf("Unknown message: "); tosc_printMessage(osc);
+    }
   } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
     if (!strcmp(tosc_getNextString(osc), "quit")) {
       sigintHandler(SIGINT);
