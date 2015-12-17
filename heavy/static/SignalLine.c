@@ -88,9 +88,9 @@ void sLine_onMessage(HvBase *_c, SignalLine *o, int letIn,
       o->t = _mm_set1_ps(msg_getFloat(m,0));
 #elif HV_SIMD_NEON
       o->n = vdupq_n_s32(0);
-      o->x = vdupq_n_f32(0.0f);
+      o->x = vdupq_n_f32(msg_getFloat(m,0));
       o->m = vdupq_n_f32(0.0f);
-      o->t = vdupq_n_f32(0.0f);
+      o->t = vdupq_n_f32(msg_getFloat(m,0));
 #else // HV_SIMD_NONE
       o->n = 0;
       o->x = msg_getFloat(m,0);
