@@ -17,18 +17,12 @@
 #include "MessageQueue.h"
 #include "Utils.h"
 
-hv_size_t mq_init(MessageQueue *q) {
+hv_size_t mq_initWithPoolSize(MessageQueue *q, hv_size_t poolSizeKB) {
+  hv_assert(poolSizeKB > 0);
   q->head = NULL;
   q->tail = NULL;
   q->pool = NULL;
-  return mp_init(&q->mp, 1);
-}
-
-void mq_initWithPoolSize(MessageQueue *q, hv_size_t poolSizeKB) {
-  q->head = NULL;
-  q->tail = NULL;
-  q->pool = NULL;
-  mp_init(&q->mp, poolSizeKB);
+  return mp_init(&q->mp, poolSizeKB);
 }
 
 void mq_free(MessageQueue *q) {
@@ -192,7 +186,7 @@ void mq_clear(MessageQueue *q) {
   }
 }
 
-void mq_clearAfter(MessageQueue *q, const double timestamp) {
+void mq_clearAfter(MessageQueue *q, const hv_uint32_t timestamp) {
   MessageNode *n = q->tail;
   while (n != NULL && timestamp <= msg_getTimestamp(n->m)) {
     // free the node's message

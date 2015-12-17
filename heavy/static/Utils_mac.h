@@ -23,10 +23,10 @@
 #include <alloca.h>
 #if HV_SIMD_AVX || HV_SIMD_SSE
 #include <immintrin.h>
-#include <mm_malloc.h>
 #elif HV_SIMD_NEON
 #include <arm_neon.h>
 #endif
+#include <mm_malloc.h>
 #include <assert.h>
 #include <math.h>
 #include <stdarg.h>
@@ -41,12 +41,15 @@
 
 // Memory management
 #define hv_alloca(_n) alloca(_n)
-#if HV_SIMD_AVX || HV_SIMD_SSE
-  #define hv_malloc(_n) _mm_malloc(_n, 32) // 32 to ensure AVX compatability (16 otherwise)
-  #define hv_free(x) _mm_free(x)
-#else
-  #define hv_malloc(_n) malloc(_n)
-  #define hv_free(x) free(x)
+#if HV_SIMD_AVX
+#define hv_malloc(_n) _mm_malloc(_n, 32)
+#define hv_free(x) _mm_free(x)
+#elif HV_SIMD_SSE || HV_SIMD_NEON
+#define hv_malloc(_n) _mm_malloc(_n, 16)
+#define hv_free(x) _mm_free(x)
+#else // HV_SIMD_NONE
+#define hv_malloc(_n) malloc(_n)
+#define hv_free(x) free(x)
 #endif
 #define hv_realloc(a, b) realloc(a, b)
 #define hv_memcpy(a, b, c) memcpy(a, b, c)

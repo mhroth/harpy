@@ -53,10 +53,13 @@
 
 // Memory management
 #define hv_alloca(_n) _alloca(_n)
-#if !defined(HV_SIMD_AVX) || !defined(HV_SIMD_SSE)
+#if HV_SIMD_AVX
 #define hv_malloc(_n) _aligned_malloc(_n, 32)
 #define hv_free(x) _aligned_free(x)
-#else
+#elif HV_SIMD_SSE || HV_SIMD_NEON
+#define hv_malloc(_n) _aligned_malloc(_n, 16)
+#define hv_free(x) _aligned_free(x)
+#else // HV_SIMD_NONE
 #define hv_malloc(_n) malloc(_n)
 #define hv_free(_n) free(_n)
 #endif
