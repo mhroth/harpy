@@ -2,3 +2,4 @@ harpy
 uploader.py
 *.pyc
 .idea
+libusb-1.0.9
