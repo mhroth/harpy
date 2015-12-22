@@ -44,8 +44,8 @@ int main(int argc, char **argv) {
   const int fd = socket(AF_INET, SOCK_DGRAM, 0);
   struct sockaddr_in sin;
   sin.sin_family = AF_INET;
-  sin.sin_port = htons(atoi(argv[1]));
-  inet_pton(AF_INET, argv[0], &sin.sin_addr);
+  inet_pton(AF_INET, argv[1], &sin.sin_addr);
+  sin.sin_port = htons(atoi(argv[2]));
   err = connect(fd, (struct sockaddr *) &sin, sizeof(struct sockaddr_in));
   if (err != 0) {
     printf("Failed to open OSC socket: %i\n", err);
@@ -80,15 +80,12 @@ int main(int argc, char **argv) {
       int usbLen = 0;
       while (_keepRunning) {
         while ((err = libusb_bulk_transfer(handle, KORG_NANOKONTROL2_ENDPOINT, usbBuffer, maxPacketSize, &usbLen, USB_BULK_TRANSFER_TIMEOUT_MS)) == 0) {
-                    // printf("[%i] ", len);
-                    // for (int j = 0; j < 4; j++) {
-                    //   printf("%02X", usbBuffer[j]);
-                    // }
-                    // printf("\n");
+          // printf("[%i] ", usbLen); for (int j = 0; j < 4; j++) printf("%02X", usbBuffer[j]); printf("\n");
           const char *address = getOscAddressForControl(usbBuffer[2]);
           if (address != NULL) {
             char oscBuffer[64]; // NOTE(mhroth): because we know that the OSC message will not be that long
-            int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "m", usbBuffer);
+            const float f = usbBuffer[3] / 127.0f;
+            int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
             send(fd, oscBuffer, oscLen, 0); // send the OSC message
           }
           break;
@@ -218,9 +215,9 @@ void printInfoForNonSystemDevice(libusb_device *device) {
 
 const char *getOscAddressForControl(const unsigned char c) {
   switch (c) {
-    case 0: return "/0/slider0";
+    case 0:  return "/0/slider0";
+    case 7:  return "/0/gain";
     case 16: return "/0/knob0";
-    case 7: return "/0/gain";
     case 23: return "/0/pan";
     default: return NULL;
   }
