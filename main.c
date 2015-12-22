@@ -16,7 +16,7 @@
 #include "oscbuffer.h"
 
 // heavy slots
-#include "heavy/rpis_osc/Heavy_rpis_osc.h"
+#include "heavy/slot0/Heavy_slot0.h"
 
 #define SAMPLE_RATE 48000
 #define BLOCK_SIZE 256
@@ -103,17 +103,32 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules 
       // http://en.flossmanuals.net/pure-data/midi/using-midi/
       const unsigned char *midi = tosc_getNextMidi(osc);
       const unsigned char command = midi[1] & 0xF0;
-      if (command == 0x90 || command == 0x80) { // note on/off
-        hv_vscheduleMessageForReceiver(
-            m->mods[0], "__hv_notein", delay*1000.0, "fffff",
-            (float) midi[0],          // port
-            (float) command,          // command; e.g. note on/off
-            (float) (midi[1] & 0x0F), // channel
-            (float) midi[2],          // data[0]; pitch
-            (float) midi[3]);         // data[1]; velocity
+      switch (command) {
+        case 0x80:
+        case 0x90: {
+          hv_vscheduleMessageForReceiver(
+              m->mods[0], "__hv_notein", delay*1000.0, "fffff",
+              (float) midi[0],          // port
+              (float) command,          // command; e.g. note on/off
+              (float) (midi[1] & 0x0F), // channel
+              (float) midi[2],          // data[0]; pitch
+              (float) midi[3]);         // data[1]; velocity
 
-        // for testing
-        hv_vscheduleMessageForReceiver(m->mods[0], "#HV_IN", delay*1000.0, "b");
+          // for testing
+          hv_vscheduleMessageForReceiver(m->mods[0], "#HV_IN", delay*1000.0, "b");
+          break;
+        }
+        case 0xB0: {
+          hv_vscheduleMessageForReceiver(
+              m->mods[0], "__hv_ctlin", delay*1000.0, "fffff",
+              (float) midi[0],          // port
+              (float) command,          // command; i.e. control change
+              (float) (midi[1] & 0x0F), // channel
+              (float) midi[2],          // data[0]; controller number
+              (float) midi[3]);         // data[1]; value
+          break;
+        }
+        default: break;
       }
     } else {
       printf("Unknown message: "); tosc_printMessage(osc);
@@ -204,7 +219,7 @@ int main() {
 
   // setup sound output
   // list all devices: $ aplay -L
-  snd_pcm_t *alsa;
+  snd_pcm_t *alsa = NULL;
   snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
   snd_pcm_set_params(alsa,
       SND_PCM_FORMAT_FLOAT_LE ,
@@ -223,7 +238,7 @@ int main() {
   }
 
   // initialise all heavy slots
-  m.mods[0] = hv_rpis_osc_new(SAMPLE_RATE);
+  m.mods[0] = hv_slot0_new(SAMPLE_RATE);
   assert(hv_getNumOutputChannels(m.mods[0]) == NUM_OUTPUT_CHANNELS);
   hv_setPrintHook(m.mods[0], &hv_printHook);
   hv_setSendHook(m.mods[0], &hv_sendHook);
@@ -265,7 +280,7 @@ int main() {
     // process Heavy
     clock_gettime(CLOCK_REALTIME, &tick);
     pthread_mutex_lock(&m.lock);
-    hv_rpis_osc_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
+    hv_slot0_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tock);
 #if PRINT_PERF
@@ -294,7 +309,10 @@ int main() {
   snd_pcm_close(alsa);
 
   // free heavy slots
-  hv_rpis_osc_free(m.mods[0]);
+  hv_slot0_free(m.mods[0]);
+
+  // free oscbuffer
+  oscbuffer_free(&m.oscBuffer);
 
   return 0;
 }
