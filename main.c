@@ -88,7 +88,7 @@ static void printIpForInterface(const char *ifName) {
 }
 
 static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
-  if (!strncmp(tosc_getAddress(osc), "/1", 2)) {
+  if (!strncmp(tosc_getAddress(osc), "/0", 2)) {
     // calculate delay in seconds, according to timetag format
     double delay = 0.0;
     if (timetag != TINYOSC_TIMETAG_IMMEDIATELY) {
@@ -96,9 +96,8 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules 
       delay += ((timetag & 0xFFFFFFFFL) / 4294967296.0); // fractions of second
     }
 
-    if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
-      hv_vscheduleMessageForReceiver(m->mods[0], "freq", delay*1000.0, "f",
-          tosc_getNextFloat(osc));
+    if (tosc_getAddress(osc)[2] == '/') {
+      hv_sendFloatToReceiver(m->mods[0], tosc_getAddress(osc)+3, tosc_getNextFloat(osc));
     } else if (!strcmp(tosc_getFormat(osc), "m")) {
       // http://en.flossmanuals.net/pure-data/midi/using-midi/
       const unsigned char *midi = tosc_getNextMidi(osc);
