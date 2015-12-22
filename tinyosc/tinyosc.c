@@ -206,8 +206,8 @@ static uint32_t tosc_vwrite(char *buffer, const int len,
       }
       case 'm': {
         if (i + 4 > len) return -3;
-        const uint32_t k = (uint32_t) va_arg(ap, int);
-        *((uint32_t *) (buffer+i)) = htonl(k);
+        const unsigned char *const k = (unsigned char *) va_arg(ap, void *);
+        memcpy(buffer+i, k, 4);
         i += 4;
         break;
       }
