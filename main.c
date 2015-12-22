@@ -16,6 +16,7 @@
 #include "oscbuffer.h"
 
 // heavy slots
+#include "heavy/slot0/Heavy_slot0.h"
 #include "heavy/rpis_osc/Heavy_rpis_osc.h"
 
 #define SAMPLE_RATE 48000
@@ -88,7 +89,7 @@ static void printIpForInterface(const char *ifName) {
 }
 
 static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
-  if (!strncmp(tosc_getAddress(osc), "/1", 2)) {
+  if (!strncmp(tosc_getAddress(osc), "/0", 2)) {
     // calculate delay in seconds, according to timetag format
     double delay = 0.0;
     if (timetag != TINYOSC_TIMETAG_IMMEDIATELY) {
@@ -96,9 +97,8 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules 
       delay += ((timetag & 0xFFFFFFFFL) / 4294967296.0); // fractions of second
     }
 
-    if (!strcmp(tosc_getAddress(osc), "/1/fader1")) {
-      hv_vscheduleMessageForReceiver(m->mods[0], "freq", delay*1000.0, "f",
-          tosc_getNextFloat(osc));
+    if (tosc_getAddress(osc)[2] == '/') {
+      hv_sendFloatToReceiver(m->mods[0], tosc_getAddress(osc)+3, tosc_getNextFloat(osc));
     } else if (!strcmp(tosc_getFormat(osc), "m")) {
       // http://en.flossmanuals.net/pure-data/midi/using-midi/
       const unsigned char *midi = tosc_getNextMidi(osc);
@@ -223,7 +223,7 @@ int main() {
   }
 
   // initialise all heavy slots
-  m.mods[0] = hv_rpis_osc_new(SAMPLE_RATE);
+  m.mods[0] = hv_slot0_new(SAMPLE_RATE);
   assert(hv_getNumOutputChannels(m.mods[0]) == NUM_OUTPUT_CHANNELS);
   hv_setPrintHook(m.mods[0], &hv_printHook);
   hv_setSendHook(m.mods[0], &hv_sendHook);
@@ -265,7 +265,7 @@ int main() {
     // process Heavy
     clock_gettime(CLOCK_REALTIME, &tick);
     pthread_mutex_lock(&m.lock);
-    hv_rpis_osc_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
+    hv_slot0_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
     clock_gettime(CLOCK_REALTIME, &tock);
 #if PRINT_PERF
@@ -294,7 +294,10 @@ int main() {
   snd_pcm_close(alsa);
 
   // free heavy slots
-  hv_rpis_osc_free(m.mods[0]);
+  hv_slot0_free(m.mods[0]);
+
+  // free oscbuffer
+  oscbuffer_free(&m.oscBuffer);
 
   return 0;
 }
