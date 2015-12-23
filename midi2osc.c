@@ -21,7 +21,7 @@
 #define USB_BULK_TRANSFER_TIMEOUT_MS 1000
 
 static void printInfoForNonSystemDevice(libusb_device *device);
-const char *getOscAddressForControl(const unsigned char c);
+static const char *getOscAddressForControl(const unsigned char c);
 
 static volatile bool _keepRunning = true;
 
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
     libusb_device *device = libusb_get_device(handle);
     err = libusb_claim_interface(handle, 0);
     if (err != 0) {
-      printf("Could not claim interface: %i\n", err);
+      printf("Could not claim interface: %s\n", libusb_error_name(err));
     } else {
       const int maxPacketSize = libusb_get_max_packet_size(device, KORG_NANOKONTROL2_ENDPOINT);
       unsigned char usbBuffer[maxPacketSize];
@@ -159,13 +159,16 @@ void printInfoForNonSystemDevice(libusb_device *device) {
 
   if (desc.idVendor == 0x05AC ||       // apple
       desc.idVendor == 0x0A5C ||       // apple
-      desc.idVendor == 0x0424) return; // rpi
+      desc.idVendor == 0x0424 ||       // rpi
+      desc.idVendor == 0x1D6B) return; // rpi
+
+  int err = 0;
 
   libusb_device_handle *handle = NULL;
-  libusb_open(device, &handle);
+  err = libusb_open(device, &handle);
   if (handle == NULL) {
-    printf("Could not open device with Vendor:Product Id %04X:%04X\n",
-        desc.idVendor, desc.idProduct);
+    printf("Could not open device with Vendor:ProductId 0x%04X:%04X: %s\n",
+        desc.idVendor, desc.idProduct, libusb_error_name(err));
   } else {
     unsigned char productBuffer[64];
     libusb_get_string_descriptor_ascii(handle, desc.iProduct,
