@@ -92,6 +92,8 @@ int main(int argc, char **argv) {
               const int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
               send(fd, oscBuffer, oscLen, 0); // send the OSC message
             }
+          } else {
+            printf("Error while waiting for bulk transfer: %s\n", libusb_error_name(err));
           }
         }
         libusb_release_interface(handle, 0);
