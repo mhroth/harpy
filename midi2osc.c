@@ -69,27 +69,34 @@ int main(int argc, char **argv) {
     printf("Could not open device with Vendor:Product Id %04X:%04X\n",
         KORG_NANOKONTROL2_VENDOR_ID, KORG_NANOKONTROL2_PRODUCT_ID);
   } else {
-    libusb_device *device = libusb_get_device(handle);
-    err = libusb_claim_interface(handle, 0);
+    const bool kernelActive = libusb_kernel_driver_active(handle, 0);
+    if (kernelActive) err = libusb_detach_kernel_driver(handle, 0);
     if (err != 0) {
-      printf("Could not claim interface: %s\n", libusb_error_name(err));
+      printf("Could not detach kernel: %s\n", libusb_error_name(err));
     } else {
-      const int maxPacketSize = libusb_get_max_packet_size(device, KORG_NANOKONTROL2_ENDPOINT);
-      unsigned char usbBuffer[maxPacketSize];
-      int usbLen = 0;
-      while (_keepRunning) {
-        if ((err = libusb_bulk_transfer(handle, KORG_NANOKONTROL2_ENDPOINT, usbBuffer, maxPacketSize, &usbLen, USB_BULK_TRANSFER_TIMEOUT_MS)) == 0) {
-          // printf("[%i] ", usbLen); for (int j = 0; j < 4; j++) printf("%02X", usbBuffer[j]); printf("\n");
-          const char *address = getOscAddressForControl(usbBuffer[2]);
-          if (address != NULL) {
-            char oscBuffer[64]; // NOTE(mhroth): because we know that the OSC message will not be that long
-            const float f = usbBuffer[3] / 127.0f;
-            int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
-            send(fd, oscBuffer, oscLen, 0); // send the OSC message
+      err = libusb_claim_interface(handle, 0);
+      if (err != 0) {
+        printf("Could not claim interface: %s\n", libusb_error_name(err));
+      } else {
+        libusb_device *device = libusb_get_device(handle);
+        const int maxPacketSize = libusb_get_max_packet_size(device, KORG_NANOKONTROL2_ENDPOINT);
+        unsigned char usbBuffer[maxPacketSize];
+        int usbLen = 0;
+        while (_keepRunning) {
+          if ((err = libusb_bulk_transfer(handle, KORG_NANOKONTROL2_ENDPOINT, usbBuffer, maxPacketSize, &usbLen, USB_BULK_TRANSFER_TIMEOUT_MS)) == 0) {
+            // printf("[%i] ", usbLen); for (int j = 0; j < 4; j++) printf("%02X", usbBuffer[j]); printf("\n");
+            const char *address = getOscAddressForControl(usbBuffer[2]);
+            if (address != NULL) {
+              char oscBuffer[64]; // NOTE(mhroth): because we know that the OSC message will not be that long
+              const float f = usbBuffer[3] / 127.0f;
+              int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
+              send(fd, oscBuffer, oscLen, 0); // send the OSC message
+            }
           }
         }
+        libusb_release_interface(handle, 0);
+        if (kernelActive) libusb_attach_kernel_driver(handle, 0); // reattach the kernel driver if necessary
       }
-      libusb_release_interface(handle, 0);
     }
     libusb_close(handle);
   }
