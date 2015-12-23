@@ -30,8 +30,8 @@ static void sigintHandler(int x) {
 }
 
 int main(int argc, char **argv) {
-  if (argc < 2) {
-    printf("Usage: midi2osc <r:IP address> <r:port> <o:USB interface index>\n");
+  if (argc < 3) {
+    printf("Usage: midi2osc <r:IP address> <r:port>\n");
     return 0;
   }
 
@@ -58,7 +58,6 @@ int main(int argc, char **argv) {
   libusb_device **device_list = NULL;
   const ssize_t numDevices = libusb_get_device_list(usbctx, &device_list);
   for (int i = 0; i < numDevices; i++) {
-    libusb_device *device = device_list[i];
     printInfoForNonSystemDevice(device_list[i]);
   }
   libusb_free_device_list(device_list, 1);
@@ -94,8 +93,8 @@ int main(int argc, char **argv) {
 
       libusb_release_interface(handle, 0);
     }
+    libusb_close(handle);
   }
-  libusb_close(handle);
 
   close(fd); // close the send socket
 
@@ -159,10 +158,11 @@ int main(int argc, char **argv) {
 void printInfoForNonSystemDevice(libusb_device *device) {
   struct libusb_device_descriptor desc;
   libusb_get_device_descriptor(device, &desc);
-
-  // NOTE(mhroth): skip over Apple devices
-  if (desc.idVendor == 0x05AC || desc.idVendor == 0x0A5C) return;
-
+/*
+  if (desc.idVendor == 0x05AC ||       // apple
+      desc.idVendor == 0x0A5C ||       // apple
+      desc.idVendor == 0x0424) return; // rpi
+*/
   libusb_device_handle *handle = NULL;
   libusb_open(device, &handle);
 
