@@ -79,28 +79,36 @@ int main(int argc, char **argv) {
         printf("Could not claim interface: %s\n", libusb_error_name(err));
       } else {
         libusb_device *device = libusb_get_device(handle);
-        const int maxPacketSize = libusb_get_max_packet_size(device, KORG_NANOKONTROL2_ENDPOINT);
+        const int maxPacketSize = libusb_get_max_packet_size(
+            device, KORG_NANOKONTROL2_ENDPOINT);
         unsigned char usbBuffer[maxPacketSize];
         int usbLen = 0;
         while (_keepRunning) {
-          if ((err = libusb_bulk_transfer(handle, KORG_NANOKONTROL2_ENDPOINT, usbBuffer, maxPacketSize, &usbLen, USB_BULK_TRANSFER_TIMEOUT_MS)) == 0) {
+          err = libusb_bulk_transfer(handle, KORG_NANOKONTROL2_ENDPOINT,
+              usbBuffer, maxPacketSize, &usbLen,
+              USB_BULK_TRANSFER_TIMEOUT_MS);
+          if (err == 0) {
             // printf("[%i] ", usbLen); for (int j = 0; j < 4; j++) printf("%02X", usbBuffer[j]); printf("\n");
             const char *address = getOscAddressForControl(usbBuffer[2]);
             if (address != NULL) {
               char oscBuffer[64];
               const float f = usbBuffer[3] / 127.0f;
-              const int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
+              const int oscLen = tosc_writeMessage(
+                  oscBuffer, sizeof(oscBuffer), address, "f", f);
               send(fd, oscBuffer, oscLen, 0); // send the OSC message
             }
           } else {
             if (err != LIBUSB_ERROR_TIMEOUT) {
-              printf("Error while waiting for bulk transfer: %s\n", libusb_error_name(err));
-              break;
+              printf("Error while waiting for bulk transfer: %s\n",
+                  libusb_error_name(err));
+              _keepRunning = false;
             }
           }
         }
         libusb_release_interface(handle, 0);
-        if (kernelWasActive) libusb_attach_kernel_driver(handle, 0); // reattach the kernel driver if necessary
+
+        // reattach the kernel driver if necessary
+        if (kernelWasActive) libusb_attach_kernel_driver(handle, 0);
       }
     }
     libusb_close(handle);
