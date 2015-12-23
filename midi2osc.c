@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
       unsigned char usbBuffer[maxPacketSize];
       int usbLen = 0;
       while (_keepRunning) {
-        while ((err = libusb_bulk_transfer(handle, KORG_NANOKONTROL2_ENDPOINT, usbBuffer, maxPacketSize, &usbLen, USB_BULK_TRANSFER_TIMEOUT_MS)) == 0) {
+        if ((err = libusb_bulk_transfer(handle, KORG_NANOKONTROL2_ENDPOINT, usbBuffer, maxPacketSize, &usbLen, USB_BULK_TRANSFER_TIMEOUT_MS)) == 0) {
           // printf("[%i] ", usbLen); for (int j = 0; j < 4; j++) printf("%02X", usbBuffer[j]); printf("\n");
           const char *address = getOscAddressForControl(usbBuffer[2]);
           if (address != NULL) {
@@ -87,10 +87,8 @@ int main(int argc, char **argv) {
             int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
             send(fd, oscBuffer, oscLen, 0); // send the OSC message
           }
-          break;
         }
       }
-
       libusb_release_interface(handle, 0);
     }
     libusb_close(handle);
@@ -158,59 +156,55 @@ int main(int argc, char **argv) {
 void printInfoForNonSystemDevice(libusb_device *device) {
   struct libusb_device_descriptor desc;
   libusb_get_device_descriptor(device, &desc);
-/*
+
   if (desc.idVendor == 0x05AC ||       // apple
       desc.idVendor == 0x0A5C ||       // apple
       desc.idVendor == 0x0424) return; // rpi
-*/
+
   libusb_device_handle *handle = NULL;
   libusb_open(device, &handle);
-
-  unsigned char productBuffer[64];
-  libusb_get_string_descriptor_ascii(handle, desc.iProduct,
-      productBuffer, sizeof(productBuffer));
-  unsigned char manufBuffer[64];
-  libusb_get_string_descriptor_ascii(handle, desc.iManufacturer,
-      manufBuffer, sizeof(manufBuffer));
-  printf("Vendor:Device (%s by %s) = 0x%04x:%04x\n",
-      productBuffer, manufBuffer,
-      desc.idVendor, desc.idProduct);
-
-  for (int i = 0; i < desc.bNumConfigurations; i++) {
-    struct libusb_config_descriptor *config = NULL;
-    libusb_get_config_descriptor(device, i, &config);
-
-    // TODO(mhroth): not sure about this part
-    // unsigned char configBuffer[64];
-    // libusb_get_string_descriptor_ascii(handle, config->iConfiguration,
-    //     configBuffer, sizeof(configBuffer));
-    printf("  * configuation %i\n", i);
-    printf("    * bNumInterfaces: %i\n", config->bNumInterfaces);
-    printf("    * MaxPower: %imA\n", config->MaxPower * 2);
-    printf("    * interfaces: %i\n", config->bNumInterfaces);
-    for (int j = 0; j < config->bNumInterfaces; j++) {
-      printf("      * interface %i\n", j);
-      struct libusb_interface interface = config->interface[j];
-      printf("        * alt settings: %i\n", interface.num_altsetting);
-      for (int k = 0; k < interface.num_altsetting; k++) {
-        printf("          * alt setting: %i\n", k);
-        struct libusb_interface_descriptor ifaceDesc = interface.altsetting[k];
-        printf("            * endpoints: %i\n", ifaceDesc.bNumEndpoints);
-        for (int m = 0; m < ifaceDesc.bNumEndpoints; m++) {
-        printf("              * endpoint: %i\n", m);
-        struct libusb_endpoint_descriptor endpoint = ifaceDesc.endpoint[m];
-          printf("                * endpoint address: 0x%X %s\n",
-              endpoint.bEndpointAddress,
-              (endpoint.bEndpointAddress & LIBUSB_ENDPOINT_IN) ? "in" : "out");
-          printf("                * wMaxPacketSize: %i\n", endpoint.wMaxPacketSize);
+  if (handle == NULL) {
+    printf("Could not open device with Vendor:Product Id %04X:%04X\n",
+        desc.idVendor, desc.idProduct);
+  } else {
+    unsigned char productBuffer[64];
+    libusb_get_string_descriptor_ascii(handle, desc.iProduct,
+        productBuffer, sizeof(productBuffer));
+    unsigned char manufBuffer[64];
+    libusb_get_string_descriptor_ascii(handle, desc.iManufacturer,
+        manufBuffer, sizeof(manufBuffer));
+    printf("Vendor:Device (%s by %s) = 0x%04x:%04x\n",
+        productBuffer, manufBuffer,
+        desc.idVendor, desc.idProduct);
+    for (int i = 0; i < desc.bNumConfigurations; i++) {
+      struct libusb_config_descriptor *config = NULL;
+      libusb_get_config_descriptor(device, i, &config);
+      printf("  * configuation %i\n", i);
+      printf("    * bNumInterfaces: %i\n", config->bNumInterfaces);
+      printf("    * MaxPower: %imA\n", config->MaxPower * 2);
+      printf("    * interfaces: %i\n", config->bNumInterfaces);
+      for (int j = 0; j < config->bNumInterfaces; j++) {
+        printf("      * interface %i\n", j);
+        struct libusb_interface interface = config->interface[j];
+        printf("        * alt settings: %i\n", interface.num_altsetting);
+        for (int k = 0; k < interface.num_altsetting; k++) {
+          printf("          * alt setting: %i\n", k);
+          struct libusb_interface_descriptor ifaceDesc = interface.altsetting[k];
+          printf("            * endpoints: %i\n", ifaceDesc.bNumEndpoints);
+          for (int m = 0; m < ifaceDesc.bNumEndpoints; m++) {
+          printf("              * endpoint: %i\n", m);
+          struct libusb_endpoint_descriptor endpoint = ifaceDesc.endpoint[m];
+            printf("                * endpoint address: 0x%X %s\n",
+                endpoint.bEndpointAddress,
+                (endpoint.bEndpointAddress & LIBUSB_ENDPOINT_IN) ? "in" : "out");
+            printf("                * wMaxPacketSize: %i\n", endpoint.wMaxPacketSize);
+          }
         }
       }
+      libusb_free_config_descriptor(config);
     }
-
-    libusb_free_config_descriptor(config);
+    libusb_close(handle);
   }
-
-  libusb_close(handle);
 }
 
 const char *getOscAddressForControl(const unsigned char c) {
