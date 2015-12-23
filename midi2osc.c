@@ -1,7 +1,7 @@
 /* Copyright (c) 2015, Martin Roth (mhroth@gmail.com). All Rights Reserved. */
 
 // $ clang midi2osc.c ./tinyosc/tinyosc.c -I/usr/local/include -L/usr/local/lib -lusb-1.0 -o midi2osc
-// $ midi2osc 192.168.0.33 9000
+// $ sudo ./midi2osc 192.168.0.33 9000
 
 #include <arpa/inet.h>
 #include <libusb-1.0/libusb.h>
@@ -69,8 +69,8 @@ int main(int argc, char **argv) {
     printf("Could not open device with Vendor:Product Id %04X:%04X\n",
         KORG_NANOKONTROL2_VENDOR_ID, KORG_NANOKONTROL2_PRODUCT_ID);
   } else {
-    const bool kernelActive = libusb_kernel_driver_active(handle, 0);
-    if (kernelActive) err = libusb_detach_kernel_driver(handle, 0);
+    const bool kernelWasActive = libusb_kernel_driver_active(handle, 0);
+    if (kernelWasActive) err = libusb_detach_kernel_driver(handle, 0);
     if (err != 0) {
       printf("Could not detach kernel: %s\n", libusb_error_name(err));
     } else {
@@ -87,15 +87,15 @@ int main(int argc, char **argv) {
             // printf("[%i] ", usbLen); for (int j = 0; j < 4; j++) printf("%02X", usbBuffer[j]); printf("\n");
             const char *address = getOscAddressForControl(usbBuffer[2]);
             if (address != NULL) {
-              char oscBuffer[64]; // NOTE(mhroth): because we know that the OSC message will not be that long
+              char oscBuffer[64];
               const float f = usbBuffer[3] / 127.0f;
-              int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
+              const int oscLen = tosc_writeMessage(oscBuffer, sizeof(oscBuffer), address, "f", f);
               send(fd, oscBuffer, oscLen, 0); // send the OSC message
             }
           }
         }
         libusb_release_interface(handle, 0);
-        if (kernelActive) libusb_attach_kernel_driver(handle, 0); // reattach the kernel driver if necessary
+        if (kernelWasActive) libusb_attach_kernel_driver(handle, 0); // reattach the kernel driver if necessary
       }
     }
     libusb_close(handle);
@@ -105,59 +105,6 @@ int main(int argc, char **argv) {
 
   libusb_exit(usbctx); // exit the usb context
   return 0;
-  //
-  //   struct libusb_device_descriptor desc;
-  //   libusb_get_device_descriptor(device, &desc);
-  //
-  //   libusb_device_handle *handle = NULL;
-  //   libusb_open(device, &handle);
-  //
-  //   if (desc.idProduct == 0x117) {
-  //     // libusb_reset_device(handle);
-  //
-  //     int config = 0;
-  //     libusb_get_configuration(handle, &config);
-  //     printf("current configuration: %i\n", config);
-  //
-  //     struct libusb_config_descriptor *configs = NULL;
-  //     int err = libusb_get_active_config_descriptor(device, &configs);
-  //     libusb_free_config_descriptor(configs);
-  //
-  //     err = libusb_claim_interface(handle, 0);
-  //     // printf("libusb_claim_interface %i\n", err);
-  //
-  //     const int maxPacketSize = libusb_get_max_packet_size(device, 129 | LIBUSB_ENDPOINT_IN);
-  //
-  //     unsigned char data[maxPacketSize];
-  //     int actual_length;
-  //     while ((err = libusb_bulk_transfer(handle, (129 | LIBUSB_ENDPOINT_IN), data, maxPacketSize, &actual_length, 0)) == 0) {
-  //       switch (err) {
-  //         case 0: {
-  //           printf("[%i] ", actual_length);
-  //           for (int j = 0; j < 4; j++) {
-  //             printf("%02X", data[j]);
-  //           }
-  //           printf("\n");
-  //           break;
-  //         }
-  //         // http://libusb.sourceforge.net/api-1.0/group__misc.html
-  //         case LIBUSB_ERROR_TIMEOUT: printf("LIBUSB_ERROR_TIMEOUT\n"); break;
-  //         case LIBUSB_ERROR_PIPE: printf("LIBUSB_ERROR_PIPE\n"); break;
-  //         case LIBUSB_ERROR_OVERFLOW: printf("LIBUSB_ERROR_OVERFLOW\n"); break;
-  //         case LIBUSB_ERROR_NO_DEVICE: printf("LIBUSB_ERROR_NO_DEVICE\n"); break;
-  //         case LIBUSB_ERROR_NOT_FOUND: printf("LIBUSB_ERROR_NOT_FOUND\n"); break;
-  //         default: printf("unknown error: %i\n", err); break;
-  //       }
-  //     }
-  //
-  //     libusb_release_interface(handle, 0);
-  //   }
-  //
-  //   libusb_close(handle);
-  // }
-  //
-  // libusb_exit(usbctx);
-  // return 0;
 }
 
 void printInfoForNonSystemDevice(libusb_device *device) {
