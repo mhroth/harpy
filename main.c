@@ -101,40 +101,36 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules 
     } else if (!strcmp(tosc_getFormat(osc), "m")) {
       // http://en.flossmanuals.net/pure-data/midi/using-midi/
       const unsigned char *midi = tosc_getNextMidi(osc);
-      const unsigned char command = midi[1] & 0xF0;
+      const unsigned char command = midi[0] & 0xF0;
+      const unsigned char channel = midi[0] & 0x0F;
+      const unsigned char data0   = midi[1] & 0x7F;
+      const unsigned char data1   = midi[2] & 0x7F;
       switch (command) {
         case 0x80:
         case 0x90: {
-          hv_vscheduleMessageForReceiver(
-              m->mods[0], "__hv_notein", delay*1000.0, "fffff",
-              (float) midi[0],          // port
-              (float) command,          // command; e.g. note on/off
-              (float) (midi[1] & 0x0F), // channel
-              (float) midi[2],          // data[0]; pitch
-              (float) midi[3]);         // data[1]; velocity
-
-          // for testing
-          hv_vscheduleMessageForReceiver(m->mods[0], "#HV_IN", delay*1000.0, "b");
+          hv_vscheduleMessageForReceiver(_context,
+                "__hv_notein", delay*1000.0, "fffff",
+                (float) data1,   // data[1]; velocity
+                (float) data0,   // data[0]; pitch
+                (float) channel, // channel
+                (float) command, // command
+                0.0f);           // port
           break;
         }
         case 0xB0: {
-          hv_vscheduleMessageForReceiver(
-              m->mods[0], "__hv_ctlin", delay*1000.0, "fffff",
-              (float) midi[0],          // port
-              (float) command,          // command; i.e. control change
-              (float) (midi[1] & 0x0F), // channel
-              (float) midi[2],          // data[0]; controller number
-              (float) midi[3]);         // data[1]; value
+          hv_vscheduleMessageForReceiver(_context,
+              "__hv_ctlin", delay*1000.0, "fffff",
+              (float) data1,   // data[1]; value
+              (float) data0,   // data[0]; controller number
+              (float) channel,
+              (float) command,
+              0.0f);           // port
           break;
         }
         default: break;
       }
     } else {
       printf("Unknown message: "); tosc_printMessage(osc);
-    }
-  } else if (!strcmp(tosc_getAddress(osc), "/admin")) {
-    if (!strcmp(tosc_getNextString(osc), "quit")) {
-      sigintHandler(SIGINT);
     }
   } else {
     printf("Unknown message: "); tosc_printMessage(osc);
