@@ -26,7 +26,6 @@
 #X text 484 12 trigger: range in [0 \, 1];
 #X obj 107 77 bang;
 #X obj 107 99 t a a;
-#X obj 62 77 bang;
 #X obj 62 99 t a a;
 #X connect 0 0 16 1;
 #X connect 0 0 14 1;
@@ -50,6 +49,5 @@
 #X connect 25 0 26 0;
 #X connect 26 0 14 0;
 #X connect 26 1 16 0;
-#X connect 27 0 28 0;
-#X connect 28 0 10 0;
-#X connect 28 1 6 0;
+#X connect 27 0 10 0;
+#X connect 27 1 6 0;
