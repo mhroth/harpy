@@ -90,53 +90,63 @@ static void printIpForInterface(const char *ifName) {
   freeifaddrs(ifaddr);
 }
 
+/*
+ * Allowable OSC message formats:
+ * /mixer s:param_name f:param_value
+ * /slot f:index s:param_name f:param_value
+ * /slot f:index m:midi
+ */
 static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules *m) {
-  if (!strncmp(tosc_getAddress(osc), "/0", 2)) {
-    // calculate delay in seconds, according to timetag format
-    double delay = 0.0;
-    if (timetag != TINYOSC_TIMETAG_IMMEDIATELY) {
-      delay = (double) (timetag >> 32); // seconds
-      delay += ((timetag & 0xFFFFFFFFL) / 4294967296.0); // fractions of second
-    }
+  void *context = NULL;
+  if (!strcmp(tosc_getAddress(osc), "/slot")) context = m->mods[(int) tosc_getNextFloat(osc)];
+  else if (!strcmp(tosc_getAddress(osc), "/mixer")) context = m->mixer;
+  else {
+    printf("Unknown OSC address: "); tosc_printMessage(osc);
+    return;
+  }
 
-    if (tosc_getAddress(osc)[2] == '/') {
-      hv_sendFloatToReceiver(m->mods[0], tosc_getAddress(osc)+3, tosc_getNextFloat(osc));
-    } else if (!strcmp(tosc_getFormat(osc), "m")) {
-      // http://en.flossmanuals.net/pure-data/midi/using-midi/
-      const unsigned char *midi = tosc_getNextMidi(osc);
-      const unsigned char command = midi[0] & 0xF0;
-      const unsigned char channel = midi[0] & 0x0F;
-      const unsigned char data0   = midi[1] & 0x7F;
-      const unsigned char data1   = midi[2] & 0x7F;
-      switch (command) {
-        case 0x80:
-        case 0x90: {
-          hv_vscheduleMessageForReceiver(_context,
-              "__hv_notein", delay*1000.0, "fffff",
-              (float) data1,   // data[1]; velocity
-              (float) data0,   // data[0]; pitch
-              (float) channel, // channel
-              (float) command, // command
-              0.0f);           // port
-          break;
-        }
-        case 0xB0: {
-          hv_vscheduleMessageForReceiver(_context,
-              "__hv_ctlin", delay*1000.0, "fffff",
-              (float) data1,   // data[1]; value
-              (float) data0,   // data[0]; controller number
-              (float) channel,
-              (float) command,
-              0.0f);           // port
-          break;
-        }
-        default: break;
+  // calculate delay in seconds, according to timetag format
+  double delay = 0.0;
+  if (timetag != TINYOSC_TIMETAG_IMMEDIATELY) {
+    delay = (double) (timetag >> 32); // seconds
+    delay += ((timetag & 0xFFFFFFFFL) / 4294967296.0); // fractions of second
+  }
+
+  if (!strcmp(tosc_getFormat(osc), "fsf") || !strcmp(tosc_getFormat(osc), "sf")) {
+    hv_sendFloatToReceiver(context,
+        tosc_getNextString(osc), tosc_getNextFloat(osc));
+  } else if (!strcmp(tosc_getFormat(osc), "fm")) {
+    // http://en.flossmanuals.net/pure-data/midi/using-midi/
+    const unsigned char *midi = tosc_getNextMidi(osc);
+    const unsigned char command = midi[0] & 0xF0;
+    const unsigned char channel = midi[0] & 0x0F;
+    const unsigned char data0   = midi[1] & 0x7F;
+    const unsigned char data1   = midi[2] & 0x7F;
+    switch (command) {
+      case 0x80:
+      case 0x90: {
+        hv_vscheduleMessageForReceiver(context,
+            "__hv_notein", delay*1000.0, "fffff",
+            (float) data1,   // data[1]; velocity
+            (float) data0,   // data[0]; pitch
+            (float) channel, // channel
+            (float) command, // command
+            0.0f);           // port
+        break;
       }
-    } else {
-      printf("Unknown message: "); tosc_printMessage(osc);
-    }
+      case 0xB0: {
+        hv_vscheduleMessageForReceiver(context,
+            "__hv_ctlin", delay*1000.0, "fffff",
+            (float) data1,   // data[1]; value
+            (float) data0,   // data[0]; controller number
+            (float) channel,
+            (float) command,
+            0.0f);           // port
+        break;
+      }
+      default: break;
   } else {
-    printf("Unknown message: "); tosc_printMessage(osc);
+    printf("Unknown OSC format: "); tosc_printMessage(osc);
   }
 }
 
