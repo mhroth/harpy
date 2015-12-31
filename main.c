@@ -145,6 +145,7 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules 
         break;
       }
       default: break;
+    }
   } else {
     printf("Unknown OSC format: "); tosc_printMessage(osc);
   }
