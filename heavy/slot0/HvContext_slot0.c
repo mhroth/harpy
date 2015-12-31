@@ -40,28 +40,18 @@
 /*
  * Function Declarations
  */
-static void cCast_nF7qb_sendMessage(HvBase *, int, const HvMessage *const);
-static void cMsg_wVKMF_sendMessage(HvBase *, int, const HvMessage *const);
-static void cLoadbang_e57E3_sendMessage(HvBase *, int, const HvMessage *const);
-static void cReceive_aDUHx_sendMessage(HvBase *, int, const HvMessage *const);
-static void cBinop_vtAOk_sendMessage(HvBase *, int, const HvMessage *const);
-static void cUnop_3Zgtw_sendMessage(HvBase *, int, const HvMessage *const);
-static void cUnop_4OB5u_sendMessage(HvBase *, int, const HvMessage *const);
-static void cMsg_5s7Ii_sendMessage(HvBase *, int, const HvMessage *const);
-static void cReceive_PijWF_sendMessage(HvBase *, int, const HvMessage *const);
-static void cMsg_kHPtR_sendMessage(HvBase *, int, const HvMessage *const);
-static void cBinop_7no2o_sendMessage(HvBase *, int, const HvMessage *const);
-static void cSwitchcase_Yu3YO_onMessage(HvBase *, void *, int letIn, const HvMessage *const, void *);
-static void cLoadbang_nrj1W_sendMessage(HvBase *, int, const HvMessage *const);
-static void cCast_eacHx_sendMessage(HvBase *, int, const HvMessage *const);
-static void cMsg_T5q1x_sendMessage(HvBase *, int, const HvMessage *const);
-static void cDelay_kkkKn_sendMessage(HvBase *, int, const HvMessage *const);
-static void cVar_ZpZIH_sendMessage(HvBase *, int, const HvMessage *const);
-static void cMsg_JzxNw_sendMessage(HvBase *, int, const HvMessage *const);
-static void cSystem_A4ucb_sendMessage(HvBase *, int, const HvMessage *const);
-static void cBinop_3JGoR_sendMessage(HvBase *, int, const HvMessage *const);
-static void cBinop_kL7Y1_sendMessage(HvBase *, int, const HvMessage *const);
-static void cReceive_Ns8V7_sendMessage(HvBase *, int, const HvMessage *const);
+static void cCast_KvZyd_sendMessage(HvBase *, int, const HvMessage *const);
+static void cMsg_XCISB_sendMessage(HvBase *, int, const HvMessage *const);
+static void cCast_ayaH8_sendMessage(HvBase *, int, const HvMessage *const);
+static void cSwitchcase_ih5Xw_onMessage(HvBase *, void *, int letIn, const HvMessage *const, void *);
+static void cSlice_6ibo4_sendMessage(HvBase *, int, const HvMessage *const);
+static void cSlice_q6fJz_sendMessage(HvBase *, int, const HvMessage *const);
+static void cSlice_dacr0_sendMessage(HvBase *, int, const HvMessage *const);
+static void cSlice_GYD2b_sendMessage(HvBase *, int, const HvMessage *const);
+static void cSlice_zxvkU_sendMessage(HvBase *, int, const HvMessage *const);
+static void cReceive_MQYjH_sendMessage(HvBase *, int, const HvMessage *const);
+static void cMsg_9mGYb_sendMessage(HvBase *, int, const HvMessage *const);
+static void cMsg_mKycj_sendMessage(HvBase *, int, const HvMessage *const);
 
 
 
@@ -72,16 +62,8 @@ static void cReceive_Ns8V7_sendMessage(HvBase *, int, const HvMessage *const);
 static void ctx_intern_scheduleMessageForReceiver(
     HvBase *const _c, const char *name, HvMessage *m) {
   switch (msg_symbolToHash(name)) {
-    case 0x47593226: { // #HV_IN
-      ctx_scheduleMessage(_c, m, &cReceive_Ns8V7_sendMessage, 0);
-      break;
-    }
-    case 0x811CC33F: { // gain
-      ctx_scheduleMessage(_c, m, &cReceive_PijWF_sendMessage, 0);
-      break;
-    }
-    case 0x35FCD07D: { // pan
-      ctx_scheduleMessage(_c, m, &cReceive_aDUHx_sendMessage, 0);
+    case 0x67E37CA3: { // __hv_notein
+      ctx_scheduleMessage(_c, m, &cReceive_MQYjH_sendMessage, 0);
       break;
     }
     default: return;
@@ -119,19 +101,16 @@ Hv_slot0 *hv_slot0_new_with_pool(double sampleRate, int poolKb) {
   Base(_c)->name = "slot0";
 
   Base(_c)->numBytes = sizeof(Hv_slot0);
-  Base(_c)->numBytes += sLine_init(&_c->sLine_jF2jq);
-  Base(_c)->numBytes += sPhasor_init(&_c->sPhasor_G9l1w, sampleRate);
-  Base(_c)->numBytes += sLine_init(&_c->sLine_O7R26);
-  Base(_c)->numBytes += sVarf_init(&_c->sVarf_7hiGi, 0.0f, 0.0f, false);
-  Base(_c)->numBytes += sVarf_init(&_c->sVarf_mEhBS, 0.0f, 0.0f, false);
-  Base(_c)->numBytes += sVarf_init(&_c->sVarf_SSqFv, 0.0f, 0.0f, false);
-  Base(_c)->numBytes += cDelay_init(Base(_c), &_c->cDelay_kkkKn, 0.0f);
-  Base(_c)->numBytes += cVar_init_f(&_c->cVar_ZpZIH, 500.0f);
-  Base(_c)->numBytes += cBinop_init(&_c->cBinop_3JGoR, 0.0f); // __mul
+  Base(_c)->numBytes += sLine_init(&_c->sLine_kjOoY);
+  Base(_c)->numBytes += sPhasor_init(&_c->sPhasor_QAHuu, sampleRate);
+  Base(_c)->numBytes += sLine_init(&_c->sLine_NHqAT);
+  Base(_c)->numBytes += cSlice_init(&_c->cSlice_6ibo4, 0, 1);
+  Base(_c)->numBytes += cSlice_init(&_c->cSlice_q6fJz, 3, 1);
+  Base(_c)->numBytes += cSlice_init(&_c->cSlice_dacr0, 1, 1);
+  Base(_c)->numBytes += cSlice_init(&_c->cSlice_GYD2b, 4, 1);
+  Base(_c)->numBytes += cSlice_init(&_c->cSlice_zxvkU, 2, 1);
 
   // loadbang
-  ctx_scheduleMessage(Base(_c), msg_initWithBang(HV_MESSAGE_ON_STACK(1), 0), &cLoadbang_nrj1W_sendMessage, 0);
-  ctx_scheduleMessage(Base(_c), msg_initWithBang(HV_MESSAGE_ON_STACK(1), 0), &cLoadbang_e57E3_sendMessage, 0);
 
   return _c;
 }
@@ -153,149 +132,131 @@ void hv_slot0_free(Hv_slot0 *_c) {
 /*
  * Static Function Implementation
  */
-static void cCast_nF7qb_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cMsg_5s7Ii_sendMessage(_c, 0, m);
-  cMsg_kHPtR_sendMessage(_c, 0, m);
-  cMsg_wVKMF_sendMessage(_c, 0, m);
+static void cCast_KvZyd_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
+  cMsg_mKycj_sendMessage(_c, 0, m);
+  cMsg_9mGYb_sendMessage(_c, 0, m);
+  cMsg_XCISB_sendMessage(_c, 0, m);
 }
 
-static void cMsg_wVKMF_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
+static void cMsg_XCISB_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
   HvMessage *m = NULL;
   m = HV_MESSAGE_ON_STACK(1);
   msg_init(m, 1, msg_getTimestamp(n));
   msg_setFloat(m, 0, 150.0f);
-  sLine_onMessage(_c, &Context(_c)->sLine_jF2jq, 0, m, NULL);
+  sLine_onMessage(_c, &Context(_c)->sLine_kjOoY, 0, m, NULL);
   m = HV_MESSAGE_ON_STACK(2);
   msg_init(m, 2, msg_getTimestamp(n));
   msg_setFloat(m, 0, 20.0f);
   msg_setFloat(m, 1, 150.0f);
-  sLine_onMessage(_c, &Context(_c)->sLine_jF2jq, 0, m, NULL);
+  sLine_onMessage(_c, &Context(_c)->sLine_kjOoY, 0, m, NULL);
 }
 
-static void cLoadbang_e57E3_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cSwitchcase_Yu3YO_onMessage(_c, NULL, 0, m, NULL);
+static void cCast_ayaH8_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
 }
 
-static void cReceive_aDUHx_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cBinop_k_onMessage(_c, NULL, HV_BINOP_MULTIPLY, 1.5708f, 0, m, &cBinop_vtAOk_sendMessage);
-}
-
-static void cBinop_vtAOk_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cUnop_onMessage(_c, HV_UNOP_COS, m, &cUnop_4OB5u_sendMessage);
-  cUnop_onMessage(_c, HV_UNOP_SIN, m, &cUnop_3Zgtw_sendMessage);
-}
-
-static void cUnop_3Zgtw_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  sVarf_onMessage(_c, &Context(_c)->sVarf_SSqFv, m);
-}
-
-static void cUnop_4OB5u_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  sVarf_onMessage(_c, &Context(_c)->sVarf_mEhBS, m);
-}
-
-static void cMsg_5s7Ii_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
-  HvMessage *m = NULL;
-  m = HV_MESSAGE_ON_STACK(1);
-  msg_init(m, 1, msg_getTimestamp(n));
-  msg_setFloat(m, 0, 0.75f);
-  sPhasor_onMessage(_c, &Context(_c)->sPhasor_G9l1w, 1, m);
-}
-
-static void cReceive_PijWF_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  sVarf_onMessage(_c, &Context(_c)->sVarf_7hiGi, m);
-}
-
-static void cMsg_kHPtR_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
-  HvMessage *m = NULL;
-  m = HV_MESSAGE_ON_STACK(1);
-  msg_init(m, 1, msg_getTimestamp(n));
-  msg_setFloat(m, 0, 1.0f);
-  sLine_onMessage(_c, &Context(_c)->sLine_O7R26, 0, m, NULL);
-  m = HV_MESSAGE_ON_STACK(2);
-  msg_init(m, 2, msg_getTimestamp(n));
-  msg_setFloat(m, 0, 0.0f);
-  msg_setFloat(m, 1, 150.0f);
-  sLine_onMessage(_c, &Context(_c)->sLine_O7R26, 0, m, NULL);
-}
-
-static void cBinop_7no2o_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cDelay_onMessage(_c, &Context(_c)->cDelay_kkkKn, 2, m, &cDelay_kkkKn_sendMessage);
-}
-
-static void cSwitchcase_Yu3YO_onMessage(HvBase *_c, void *o, int letIn, const HvMessage *const m, void *sendMessage) {
+static void cSwitchcase_ih5Xw_onMessage(HvBase *_c, void *o, int letIn, const HvMessage *const m, void *sendMessage) {
   switch (msg_getHash(m,0)) {
     case 0x0: { // "0.0"
-      cMsg_T5q1x_sendMessage(_c, 0, m);
-      break;
-    }
-    case 0x7A5B032D: { // "stop"
-      cMsg_T5q1x_sendMessage(_c, 0, m);
+      cCast_onMessage(_c, HV_CAST_BANG, 0, m, &cCast_ayaH8_sendMessage);
       break;
     }
     default: {
-      cCast_onMessage(_c, HV_CAST_BANG, 0, m, &cCast_eacHx_sendMessage);
+      cMsg_mKycj_sendMessage(_c, 0, m);
+      cMsg_9mGYb_sendMessage(_c, 0, m);
+      cMsg_XCISB_sendMessage(_c, 0, m);
       break;
     }
   }
 }
 
-static void cLoadbang_nrj1W_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cMsg_JzxNw_sendMessage(_c, 0, m);
-  cVar_onMessage(_c, &Context(_c)->cVar_ZpZIH, 0, m, &cVar_ZpZIH_sendMessage);
+static void cSlice_6ibo4_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
+  switch(letIn) {
+    case 0: {
+      cSwitchcase_ih5Xw_onMessage(_c, NULL, 0, m, NULL);
+      break;
+    }
+    case 1: {
+      break;
+    }
+    default: return;
+  }
 }
 
-static void cCast_eacHx_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cMsg_T5q1x_sendMessage(_c, 0, m);
-  cDelay_onMessage(_c, &Context(_c)->cDelay_kkkKn, 0, m, &cDelay_kkkKn_sendMessage);
-  cMsg_5s7Ii_sendMessage(_c, 0, m);
-  cMsg_kHPtR_sendMessage(_c, 0, m);
-  cMsg_wVKMF_sendMessage(_c, 0, m);
+static void cSlice_q6fJz_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
+  switch(letIn) {
+    case 0: {
+      break;
+    }
+    case 1: {
+      break;
+    }
+    default: return;
+  }
 }
 
-static void cMsg_T5q1x_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
+static void cSlice_dacr0_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
+  switch(letIn) {
+    case 0: {
+      break;
+    }
+    case 1: {
+      break;
+    }
+    default: return;
+  }
+}
+
+static void cSlice_GYD2b_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
+  switch(letIn) {
+    case 0: {
+      break;
+    }
+    case 1: {
+      break;
+    }
+    default: return;
+  }
+}
+
+static void cSlice_zxvkU_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
+  switch(letIn) {
+    case 0: {
+      break;
+    }
+    case 1: {
+      break;
+    }
+    default: return;
+  }
+}
+
+static void cReceive_MQYjH_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
+  cSlice_onMessage(_c, &Context(_c)->cSlice_GYD2b, 0, m, &cSlice_GYD2b_sendMessage);
+  cSlice_onMessage(_c, &Context(_c)->cSlice_q6fJz, 0, m, &cSlice_q6fJz_sendMessage);
+  cSlice_onMessage(_c, &Context(_c)->cSlice_zxvkU, 0, m, &cSlice_zxvkU_sendMessage);
+  cSlice_onMessage(_c, &Context(_c)->cSlice_dacr0, 0, m, &cSlice_dacr0_sendMessage);
+  cSlice_onMessage(_c, &Context(_c)->cSlice_6ibo4, 0, m, &cSlice_6ibo4_sendMessage);
+}
+
+static void cMsg_9mGYb_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
   HvMessage *m = NULL;
   m = HV_MESSAGE_ON_STACK(1);
   msg_init(m, 1, msg_getTimestamp(n));
-  msg_setSymbol(m, 0, "clear");
-  cDelay_onMessage(_c, &Context(_c)->cDelay_kkkKn, 0, m, &cDelay_kkkKn_sendMessage);
+  msg_setFloat(m, 0, 1.0f);
+  sLine_onMessage(_c, &Context(_c)->sLine_NHqAT, 0, m, NULL);
+  m = HV_MESSAGE_ON_STACK(2);
+  msg_init(m, 2, msg_getTimestamp(n));
+  msg_setFloat(m, 0, 0.0f);
+  msg_setFloat(m, 1, 150.0f);
+  sLine_onMessage(_c, &Context(_c)->sLine_NHqAT, 0, m, NULL);
 }
 
-static void cDelay_kkkKn_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cDelay_clearExecutingMessage(&Context(_c)->cDelay_kkkKn, m);
-  cDelay_onMessage(_c, &Context(_c)->cDelay_kkkKn, 0, m, &cDelay_kkkKn_sendMessage);
-  cMsg_5s7Ii_sendMessage(_c, 0, m);
-  cMsg_kHPtR_sendMessage(_c, 0, m);
-  cMsg_wVKMF_sendMessage(_c, 0, m);
-}
-
-static void cVar_ZpZIH_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cBinop_onMessage(_c, &Context(_c)->cBinop_3JGoR, HV_BINOP_MULTIPLY, 0, m, &cBinop_3JGoR_sendMessage);
-}
-
-static void cMsg_JzxNw_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
+static void cMsg_mKycj_sendMessage(HvBase *_c, int letIn, const HvMessage *const n) {
   HvMessage *m = NULL;
   m = HV_MESSAGE_ON_STACK(1);
   msg_init(m, 1, msg_getTimestamp(n));
-  msg_setSymbol(m, 0, "samplerate");
-  cSystem_onMessage(_c, NULL, 0, m, &cSystem_A4ucb_sendMessage);
-}
-
-static void cSystem_A4ucb_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cBinop_k_onMessage(_c, NULL, HV_BINOP_DIVIDE, 1000.0f, 0, m, &cBinop_kL7Y1_sendMessage);
-}
-
-static void cBinop_3JGoR_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cBinop_k_onMessage(_c, NULL, HV_BINOP_MAX, 1.0f, 0, m, &cBinop_7no2o_sendMessage);
-}
-
-static void cBinop_kL7Y1_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cBinop_onMessage(_c, &Context(_c)->cBinop_3JGoR, HV_BINOP_MULTIPLY, 1, m, &cBinop_3JGoR_sendMessage);
-}
-
-static void cReceive_Ns8V7_sendMessage(HvBase *_c, int letIn, const HvMessage *const m) {
-  cMsg_5s7Ii_sendMessage(_c, 0, m);
-  cMsg_kHPtR_sendMessage(_c, 0, m);
-  cMsg_wVKMF_sendMessage(_c, 0, m);
+  msg_setFloat(m, 0, 0.75f);
+  sPhasor_onMessage(_c, &Context(_c)->sPhasor_QAHuu, 1, m);
 }
 
 
@@ -335,8 +296,8 @@ int hv_slot0_process(Hv_slot0 *const _c, float **const inputBuffers, float **con
     __hv_zero_f(VOf(O1));
 
     // process all signal functions
-    __hv_line_f(&_c->sLine_jF2jq, VOf(Bf0));
-    __hv_phasor_f(&_c->sPhasor_G9l1w, VIf(Bf0), VOf(Bf0));
+    __hv_line_f(&_c->sLine_kjOoY, VOf(Bf0));
+    __hv_phasor_f(&_c->sPhasor_QAHuu, VIf(Bf0), VOf(Bf0));
     __hv_var_k_f(VOf(Bf1), 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0);
     __hv_sub_f(VIf(Bf0), VIf(Bf1), VOf(Bf1));
     __hv_abs_f(VIf(Bf1), VOf(Bf1));
@@ -352,16 +313,10 @@ int hv_slot0_process(Hv_slot0 *const _c, float **const inputBuffers, float **con
     __hv_mul_f(VIf(Bf2), VIf(Bf4), VOf(Bf4));
     __hv_sub_f(VIf(Bf1), VIf(Bf4), VOf(Bf4));
     __hv_fma_f(VIf(Bf0), VIf(Bf3), VIf(Bf4), VOf(Bf4));
-    __hv_line_f(&_c->sLine_O7R26, VOf(Bf3));
+    __hv_line_f(&_c->sLine_NHqAT, VOf(Bf3));
     __hv_mul_f(VIf(Bf4), VIf(Bf3), VOf(Bf3));
-    __hv_var_f(&_c->sVarf_7hiGi, VOf(Bf4));
-    __hv_mul_f(VIf(Bf3), VIf(Bf4), VOf(Bf4));
-    __hv_var_f(&_c->sVarf_mEhBS, VOf(Bf3));
-    __hv_mul_f(VIf(Bf4), VIf(Bf3), VOf(Bf3));
-    __hv_var_f(&_c->sVarf_SSqFv, VOf(Bf0));
-    __hv_mul_f(VIf(Bf4), VIf(Bf0), VOf(Bf0));
+    __hv_add_f(VIf(Bf3), VIf(O1), VOf(O1));
     __hv_add_f(VIf(Bf3), VIf(O0), VOf(O0));
-    __hv_add_f(VIf(Bf0), VIf(O1), VOf(O1));
 
     // save output vars to output buffer
     __hv_store_f(outputBuffers[0]+n, VIf(O0));

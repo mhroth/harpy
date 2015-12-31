@@ -28,18 +28,18 @@
 extern "C" {
 #endif
 
-#ifndef _HEAVY_BASS_H_
-#define _HEAVY_BASS_H_
+#ifndef _HEAVY_SLOT1_H_
+#define _HEAVY_SLOT1_H_
 
 #include "Heavy.h"
 
-typedef struct Hv_bass Hv_bass;
+typedef struct Hv_slot1 Hv_slot1;
 
 /**
  * Creates a new patch instance.
  * Sample rate should be positive and in Hertz.
  */
-HV_EXPORT Hv_bass *hv_bass_new(double sampleRate);
+HV_EXPORT Hv_slot1 *hv_slot1_new(double sampleRate);
 
 /**
  * Creates a new patch instance.
@@ -47,23 +47,23 @@ HV_EXPORT Hv_bass *hv_bass_new(double sampleRate);
  * Pool size is in kilobytes, and determines the maximum amount of memory
  *   allocated to messages at any time. By default this is 10.
  */
-HV_EXPORT Hv_bass *hv_bass_new_with_pool(double sampleRate, int poolKb);
+HV_EXPORT Hv_slot1 *hv_slot1_new_with_pool(double sampleRate, int poolKb);
 
 /** Frees a patch instance. */
-HV_EXPORT void hv_bass_free(Hv_bass *c);
+HV_EXPORT void hv_slot1_free(Hv_slot1 *c);
 
 /** Processes one block of samples for a patch instance. The buffer format is an array of float channel arrays. */
-HV_EXPORT int hv_bass_process(Hv_bass *const c, float **const inputBuffers, float **const outputBuffers, int n4);
+HV_EXPORT int hv_slot1_process(Hv_slot1 *const c, float **const inputBuffers, float **const outputBuffers, int n4);
 
 /** Processes one block of samples for a patch instance. The buffer format is an uninterleaved float array of channels. */
-HV_EXPORT int hv_bass_process_inline(Hv_bass *const c, float *const inputBuffers, float *const outputBuffers, int n4);
+HV_EXPORT int hv_slot1_process_inline(Hv_slot1 *const c, float *const inputBuffers, float *const outputBuffers, int n4);
 
 /** Processes one block of samples for a patch instance. The buffer format is an interleaved float array of channels. */
-HV_EXPORT int hv_bass_process_interleaved(Hv_bass *const c, float *const inputBuffers, float *const outputBuffers, int n4);
+HV_EXPORT int hv_slot1_process_interleaved(Hv_slot1 *const c, float *const inputBuffers, float *const outputBuffers, int n4);
 
 /** Processes one block of samples for a patch instance. The buffer format is an interleaved short array of channels. */
-HV_EXPORT int hv_bass_process_interleaved_short(Hv_bass *const c, short *const inputBuffers, short *const outputBuffers, int n4);
-#endif // _HEAVY_BASS_H_
+HV_EXPORT int hv_slot1_process_interleaved_short(Hv_slot1 *const c, short *const inputBuffers, short *const outputBuffers, int n4);
+#endif // _HEAVY_SLOT1_H_
 
 #ifdef __cplusplus
 } // extern "C"

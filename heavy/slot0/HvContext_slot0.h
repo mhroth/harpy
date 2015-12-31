@@ -32,33 +32,25 @@
 #define Context(_x) ((Hv_slot0 *) (_x))
 
 // object includes
-#include "ControlSystem.h"
 #include "SignalVar.h"
 #include "ControlCast.h"
+#include "ControlSlice.h"
 #include "SignalLine.h"
 #include "HeavyMath.h"
-#include "ControlBinop.h"
-#include "ControlDelay.h"
-#include "ControlVar.h"
 #include "SignalPhasor.h"
-#include "ControlUnop.h"
 
 typedef struct Hv_slot0 {
   HvBase base;
 
   // objects
-  SignalLine sLine_jF2jq;
-  SignalPhasor sPhasor_G9l1w;
-  SignalLine sLine_O7R26;
-  SignalVarf sVarf_7hiGi;
-  SignalVarf sVarf_mEhBS;
-  SignalVarf sVarf_SSqFv;
-  ControlBinop cBinop_vtAOk;
-  ControlBinop cBinop_7no2o;
-  ControlDelay cDelay_kkkKn;
-  ControlVar cVar_ZpZIH;
-  ControlBinop cBinop_3JGoR;
-  ControlBinop cBinop_kL7Y1;
+  SignalLine sLine_kjOoY;
+  SignalPhasor sPhasor_QAHuu;
+  SignalLine sLine_NHqAT;
+  ControlSlice cSlice_6ibo4;
+  ControlSlice cSlice_q6fJz;
+  ControlSlice cSlice_dacr0;
+  ControlSlice cSlice_GYD2b;
+  ControlSlice cSlice_zxvkU;
 } Hv_slot0;
 
 #endif // _HEAVYCONTEXT_SLOT0_H_

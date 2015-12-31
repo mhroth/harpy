@@ -15,8 +15,10 @@
 #include "tinyosc/tinyosc.h" // OSC support
 #include "oscbuffer.h"
 
-// heavy slots
+// heavy
 #include "heavy/slot0/Heavy_slot0.h"
+#include "heavy/slot1/Heavy_slot1.h"
+#include "heavy/mixer/Heavy_mixer.h"
 
 #define SAMPLE_RATE 48000
 #define BLOCK_SIZE 256
@@ -28,6 +30,7 @@ static volatile bool _keepRunning = true;
 
 typedef struct {
   void *mods[4];
+  void *mixer;
   OscBuffer oscBuffer;
   pthread_mutex_t lock;
 } Modules;
@@ -109,12 +112,12 @@ static void handleOscMessage(tosc_message *osc, const uint64_t timetag, Modules 
         case 0x80:
         case 0x90: {
           hv_vscheduleMessageForReceiver(_context,
-                "__hv_notein", delay*1000.0, "fffff",
-                (float) data1,   // data[1]; velocity
-                (float) data0,   // data[0]; pitch
-                (float) channel, // channel
-                (float) command, // command
-                0.0f);           // port
+              "__hv_notein", delay*1000.0, "fffff",
+              (float) data1,   // data[1]; velocity
+              (float) data0,   // data[0]; pitch
+              (float) channel, // channel
+              (float) command, // command
+              0.0f);           // port
           break;
         }
         case 0xB0: {
@@ -217,7 +220,7 @@ int main() {
   snd_pcm_t *alsa = NULL;
   snd_pcm_open(&alsa, ALSA_DEVICE, SND_PCM_STREAM_PLAYBACK, 0);
   snd_pcm_set_params(alsa,
-      SND_PCM_FORMAT_FLOAT_LE ,
+      SND_PCM_FORMAT_FLOAT_LE,
       SND_PCM_ACCESS_RW_NONINTERLEAVED,
       NUM_OUTPUT_CHANNELS, // stereo output
       SAMPLE_RATE, // 48KHz sampling rate
@@ -233,11 +236,19 @@ int main() {
   }
 
   // initialise all heavy slots
+  m.mixer = hv_mixer_new(SAMPLE_RATE);
+
   m.mods[0] = hv_slot0_new(SAMPLE_RATE);
   assert(hv_getNumOutputChannels(m.mods[0]) == NUM_OUTPUT_CHANNELS);
   hv_setPrintHook(m.mods[0], &hv_printHook);
   hv_setSendHook(m.mods[0], &hv_sendHook);
   hv_setUserData(m.mods[0], &m);
+
+  m.mods[1] = hv_slot1_new(SAMPLE_RATE);
+  assert(hv_getNumOutputChannels(m.mods[1]) == NUM_OUTPUT_CHANNELS);
+  hv_setPrintHook(m.mods[1], &hv_printHook);
+  hv_setSendHook(m.mods[1], &hv_sendHook);
+  hv_setUserData(m.mods[1], &m);
 
   // read osc buffers from file
   {
@@ -267,7 +278,13 @@ int main() {
   pthread_create(&networkThread, NULL, &network_run, &m);
 
   // the audio loop
-  float *audioBuffer[2] = {
+  float *audioBuffer[4] = {
+    (float *) alloca(BLOCK_SIZE*sizeof(float)),
+    (float *) alloca(BLOCK_SIZE*sizeof(float)),
+    (float *) alloca(BLOCK_SIZE*sizeof(float)),
+    (float *) alloca(BLOCK_SIZE*sizeof(float))
+  };
+  float *audioBufferMixed[2] = {
     (float *) alloca(BLOCK_SIZE*sizeof(float)),
     (float *) alloca(BLOCK_SIZE*sizeof(float))
   };
@@ -276,7 +293,9 @@ int main() {
     clock_gettime(CLOCK_REALTIME, &tick);
     pthread_mutex_lock(&m.lock);
     hv_slot0_process(m.mods[0], NULL, audioBuffer, BLOCK_SIZE);
+    hv_slot1_process(m.mods[1], NULL, audioBuffer+2, BLOCK_SIZE);
     pthread_mutex_unlock(&m.lock);
+    hv_mixer_process(m.mixer, audioBuffer, audioBufferMixed, BLOCK_SIZE);
     clock_gettime(CLOCK_REALTIME, &tock);
 #if PRINT_PERF
     struct timespec diff_tock;
@@ -287,7 +306,8 @@ int main() {
         100.0*elapsed_ns/(1000000000.0*BLOCK_SIZE/SAMPLE_RATE));
 #endif // PRINT_PERF
 
-    snd_pcm_sframes_t frames = snd_pcm_writen(alsa, (void **) audioBuffer, BLOCK_SIZE);
+    snd_pcm_sframes_t frames = snd_pcm_writen(
+        alsa, (void **) audioBufferMixed, BLOCK_SIZE);
     if (frames < 0) {
       frames = snd_pcm_recover(alsa, frames, 0);
       if (frames < 0) printf("ALSA: %s\n", snd_strerror(frames));
@@ -305,6 +325,8 @@ int main() {
 
   // free heavy slots
   hv_slot0_free(m.mods[0]);
+  hv_slot1_free(m.mods[1]);
+  hv_mixer_free(m.mixer);
 
   // free oscbuffer
   oscbuffer_free(&m.oscBuffer);
