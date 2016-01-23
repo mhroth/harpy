@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -166,10 +166,10 @@ static inline void __hv_biquad_k_f(SignalBiquad_k *o, hv_bInf_t bIn, hv_bOutf_t 
 
   *bOut = _mm256_insertf128_ps(_mm256_castps128_ps256(lo_y), up_y, 1);
 #elif HV_SIMD_SSE
-  __m128 x3 = _mm_set1_ps(bIn[3]);
-  __m128 x2 = _mm_set1_ps(bIn[2]);
-  __m128 x1 = _mm_set1_ps(bIn[1]);
-  __m128 x0 = _mm_set1_ps(bIn[0]);
+  __m128 x3 = _mm_shuffle_ps(bIn, bIn, _MM_SHUFFLE(3,3,3,3));
+  __m128 x2 = _mm_shuffle_ps(bIn, bIn, _MM_SHUFFLE(2,2,2,2));
+  __m128 x1 = _mm_shuffle_ps(bIn, bIn, _MM_SHUFFLE(1,1,1,1));
+  __m128 x0 = _mm_shuffle_ps(bIn, bIn, _MM_SHUFFLE(0,0,0,0));
 
   __m128 a = _mm_mul_ps(o->coeff_xp3, x3);
   __m128 b = _mm_mul_ps(o->coeff_xp2, x2);
@@ -190,8 +190,8 @@ static inline void __hv_biquad_k_f(SignalBiquad_k *o, hv_bInf_t bIn, hv_bOutf_t 
 
   o->xm1 = x3;
   o->xm2 = x2;
-  o->ym1 = _mm_set1_ps(y[3]);
-  o->ym2 = _mm_set1_ps(y[2]);
+  o->ym1 = _mm_shuffle_ps(y, y, _MM_SHUFFLE(3,3,3,3));
+  o->ym2 = _mm_shuffle_ps(y, y, _MM_SHUFFLE(2,2,2,2));
 
   *bOut = y;
 #elif HV_SIMD_NEON

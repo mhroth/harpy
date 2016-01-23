@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,9 +17,8 @@
 #ifndef _HEAVY_TABLE_H_
 #define _HEAVY_TABLE_H_
 
-#include "HvBase.h"
-#include "HvMessage.h"
-#include "Utils.h"
+struct HvBase;
+struct HvMessage;
 
 typedef struct HvTable {
   float *buffer;

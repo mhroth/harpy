@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  */
 
 #include "MessageQueue.h"
-#include "Utils.h"
+#include "HvUtils.h"
 
 hv_size_t mq_initWithPoolSize(MessageQueue *q, hv_size_t poolSizeKB) {
   hv_assert(poolSizeKB > 0);

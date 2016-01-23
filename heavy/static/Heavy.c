@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,23 +14,30 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "Heavy.h"
+#include "HvBase.h"
+#include "HvTable.h"
 
 #if !HV_WIN
 #pragma mark - Heavy Table
 #endif
 
-int hv_table_resize(HvTable *o, hv_uint32_t newLength) {
+#ifdef __cplusplus
+extern "C" {
+#endif
+HV_EXPORT int hv_table_resize(struct HvTable *o, hv_uint32_t newLength) {
   return hTable_resize(o, newLength);
 }
 
-float *hv_table_getBuffer(HvTable *o) {
+HV_EXPORT float *hv_table_getBuffer(struct HvTable *o) {
   return hTable_getBuffer(o);
 }
 
-hv_size_t hv_table_getLength(HvTable *o) {
+HV_EXPORT hv_uint32_t hv_table_getLength(struct HvTable *o) {
   return hTable_getLength(o);
 }
+#ifdef __cplusplus
+}
+#endif
 
 
 
@@ -38,81 +45,87 @@ hv_size_t hv_table_getLength(HvTable *o) {
 #pragma mark - Heavy Message
 #endif
 
-hv_size_t hv_msg_getByteSize(hv_uint32_t numElements) {
+#ifdef __cplusplus
+extern "C" {
+#endif
+HV_EXPORT hv_size_t hv_msg_getByteSize(hv_uint32_t numElements) {
   return msg_getByteSize(numElements);
 }
 
-void hv_msg_init(HvMessage *m, int numElements, hv_uint32_t timestamp) {
+HV_EXPORT void hv_msg_init(HvMessage *m, int numElements, hv_uint32_t timestamp) {
   msg_init(m, numElements, timestamp);
 }
 
-hv_size_t hv_msg_getNumElements(const HvMessage *const m) {
+HV_EXPORT hv_size_t hv_msg_getNumElements(const HvMessage *const m) {
   return msg_getNumElements(m);
 }
 
-double hv_msg_getTimestamp(const HvMessage *const m) {
+HV_EXPORT double hv_msg_getTimestamp(const HvMessage *const m) {
   return msg_getTimestamp(m);
 }
 
-void hv_msg_setTimestamp(HvMessage *m, hv_uint32_t timestamp) {
+HV_EXPORT void hv_msg_setTimestamp(HvMessage *m, hv_uint32_t timestamp) {
   msg_setTimestamp(m, timestamp);
 }
 
-bool hv_msg_isBang(const HvMessage *const m, int i) {
+HV_EXPORT bool hv_msg_isBang(const HvMessage *const m, int i) {
   return msg_isBang(m,i);
 }
 
-void hv_msg_setBang(HvMessage *m, int i) {
+HV_EXPORT void hv_msg_setBang(HvMessage *m, int i) {
   msg_setBang(m,i);
 }
 
-bool hv_msg_isFloat(const HvMessage *const m, int i) {
+HV_EXPORT bool hv_msg_isFloat(const HvMessage *const m, int i) {
   return msg_isFloat(m, i);
 }
 
-float hv_msg_getFloat(const HvMessage *const m, int i) {
+HV_EXPORT float hv_msg_getFloat(const HvMessage *const m, int i) {
   return msg_getFloat(m,i);
 }
 
-void hv_msg_setFloat(HvMessage *m, int i, float f) {
+HV_EXPORT void hv_msg_setFloat(HvMessage *m, int i, float f) {
   msg_setFloat(m,i,f);
 }
 
-bool hv_msg_isSymbol(const HvMessage *const m, int i) {
+HV_EXPORT bool hv_msg_isSymbol(const HvMessage *const m, int i) {
   return msg_isSymbol(m,i);
 }
 
-char *hv_msg_getSymbol(const HvMessage *const m, int i) {
+HV_EXPORT char *hv_msg_getSymbol(const HvMessage *const m, int i) {
   return msg_getSymbol(m,i);
 }
 
-void hv_msg_setSymbol(HvMessage *m, int i, char *s) {
+HV_EXPORT void hv_msg_setSymbol(HvMessage *m, int i, char *s) {
   msg_setSymbol(m,i,s);
 }
 
-bool hv_msg_isHash(const HvMessage *const m, int i) {
+HV_EXPORT bool hv_msg_isHash(const HvMessage *const m, int i) {
   return msg_isHash(m, i);
 }
 
-unsigned int hv_msg_getHash(const HvMessage *const m, int i) {
+HV_EXPORT hv_uint32_t hv_msg_getHash(const HvMessage *const m, int i) {
   return msg_getHash(m, i);
 }
 
-bool hv_msg_hasFormat(const HvMessage *const m, const char *fmt) {
+HV_EXPORT bool hv_msg_hasFormat(const HvMessage *const m, const char *fmt) {
   return msg_hasFormat(m, fmt);
 }
 
-char *hv_msg_toString(const HvMessage *const m) {
+HV_EXPORT char *hv_msg_toString(const HvMessage *const m) {
   return msg_toString(m);
 }
 
-HvMessage *hv_msg_copy(HvMessage *m) {
+HV_EXPORT HvMessage *hv_msg_copy(HvMessage *m) {
   return msg_copy(m);
 }
 
-void hv_msg_free(HvMessage *m) {
+HV_EXPORT void hv_msg_free(HvMessage *m) {
   msg_free(m);
 }
+#ifdef __cplusplus
+}
+#endif
 
 
 
@@ -120,52 +133,55 @@ void hv_msg_free(HvMessage *m) {
 #pragma mark - Heavy Common
 #endif
 
-double hv_getSampleRate(Heavy *c) {
-  return ctx_getSampleRate(Base(c));
+#ifdef __cplusplus
+extern "C" {
+#endif
+HV_EXPORT double hv_getSampleRate(HvBase *c) {
+  return ctx_getSampleRate(c);
 }
 
-int hv_getNumInputChannels(Heavy *c) {
-  return ctx_getNumInputChannels(Base(c));
+HV_EXPORT int hv_getNumInputChannels(HvBase *c) {
+  return ctx_getNumInputChannels(c);
 }
 
-int hv_getNumOutputChannels(Heavy *c) {
-  return ctx_getNumOutputChannels(Base(c));
+HV_EXPORT int hv_getNumOutputChannels(HvBase *c) {
+  return ctx_getNumOutputChannels(c);
 }
 
-const char *hv_getName(Heavy *c) {
-  return ctx_getName(Base(c));
+HV_EXPORT const char *hv_getName(HvBase *c) {
+  return ctx_getName(c);
 }
 
-void hv_setPrintHook(Heavy *c,
+HV_EXPORT void hv_setPrintHook(HvBase *c,
     void (*f)(double, const char *, const char *, void *)) {
-  ctx_setPrintHook(Base(c), f);
+  ctx_setPrintHook(c, f);
 }
 
-void hv_setSendHook(Heavy *c,
+HV_EXPORT void hv_setSendHook(HvBase *c,
     void (*f)(double, const char *, const HvMessage *const, void *)) {
-  ctx_setSendHook(Base(c), f);
+  ctx_setSendHook(c, f);
 }
 
-void hv_sendBangToReceiver(Heavy *c, const char *receiverName) {
+HV_EXPORT void hv_sendBangToReceiver(HvBase *c, const char *receiverName) {
   HvMessage *m = HV_MESSAGE_ON_STACK(1);
-  msg_initWithBang(m, Base(c)->blockStartTimestamp);
-  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+  msg_initWithBang(m, c->blockStartTimestamp);
+  ctx_scheduleMessageForReceiver(c, receiverName, m);
 }
 
-void hv_sendFloatToReceiver(Heavy *c, const char *receiverName, const float x) {
+HV_EXPORT void hv_sendFloatToReceiver(HvBase *c, const char *receiverName, const float x) {
   HvMessage *m = HV_MESSAGE_ON_STACK(1);
-  msg_initWithFloat(m, Base(c)->blockStartTimestamp, x);
-  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+  msg_initWithFloat(m, c->blockStartTimestamp, x);
+  ctx_scheduleMessageForReceiver(c, receiverName, m);
 }
 
-void hv_sendSymbolToReceiver(Heavy *c, const char *receiverName, char *s) {
+HV_EXPORT void hv_sendSymbolToReceiver(HvBase *c, const char *receiverName, char *s) {
   HvMessage *m = HV_MESSAGE_ON_STACK(1);
-  msg_initWithSymbol(m, Base(c)->blockStartTimestamp, s);
-  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+  msg_initWithSymbol(m, c->blockStartTimestamp, s);
+  ctx_scheduleMessageForReceiver(c, receiverName, m);
 }
 
-void hv_vscheduleMessageForReceiver(Heavy *c, const char *receiverName,
-    const double delayMs, const char *format, ...) {
+HV_EXPORT void hv_vscheduleMessageForReceiver(HvBase *c, const char *receiverName,
+    double delayMs, const char *format, ...) {
   hv_assert(c != NULL);
   hv_assert(receiverName != NULL);
   hv_assert(delayMs >= 0.0);
@@ -176,8 +192,8 @@ void hv_vscheduleMessageForReceiver(Heavy *c, const char *receiverName,
 
   const int numElem = (int) hv_strlen(format);
   HvMessage *m = HV_MESSAGE_ON_STACK(numElem);
-  msg_init(m, numElem, Base(c)->blockStartTimestamp +
-      (hv_uint32_t) (delayMs*ctx_getSampleRate(Base(c))/1000.0));
+  msg_init(m, numElem, c->blockStartTimestamp +
+      (hv_uint32_t) (delayMs*ctx_getSampleRate(c)/1000.0));
   for (int i = 0; i < numElem; i++) {
     switch (format[i]) {
       case 'b': msg_setBang(m,i); break;
@@ -186,39 +202,46 @@ void hv_vscheduleMessageForReceiver(Heavy *c, const char *receiverName,
       default: break;
     }
   }
-  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+  ctx_scheduleMessageForReceiver(c, receiverName, m);
 
   va_end(ap);
 }
 
-void hv_scheduleMessageForReceiver(Heavy *c, const char *receiverName,
+HV_EXPORT void hv_scheduleMessageForReceiver(HvBase *c, const char *receiverName,
     double delayMs, HvMessage *m) {
   hv_assert(delayMs >= 0.0);
-  msg_setTimestamp(m, Base(c)->blockStartTimestamp +
-      (hv_uint32_t) (delayMs*ctx_getSampleRate(Base(c))/1000.0));
-  ctx_scheduleMessageForReceiver(Base(c), receiverName, m);
+  msg_setTimestamp(m, c->blockStartTimestamp +
+      (hv_uint32_t) (delayMs*ctx_getSampleRate(c)/1000.0));
+  ctx_scheduleMessageForReceiver(c, receiverName, m);
 }
 
-HvTable *hv_getTableForName(Heavy *c, const char *tableName) {
-  return ctx_getTableForName(Base(c), tableName);
+HV_EXPORT HvTable *hv_getTableForName(HvBase *c, const char *tableName) {
+  return ctx_getTableForName(c, tableName);
 }
 
-void hv_cancelMessage(Heavy *c, HvMessage *m) {
-  ctx_cancelMessage(Base(c), m, NULL);
+HV_EXPORT void hv_cancelMessage(HvBase *c, HvMessage *m) {
+  ctx_cancelMessage(c, m, NULL);
 }
 
-double hv_getCurrentTime(Heavy *c) {
-  return ((double) Base(c)->blockStartTimestamp)/Base(c)->sampleRate;
+HV_EXPORT double hv_getCurrentTime(HvBase *c) {
+  return ((double) c->blockStartTimestamp)/c->sampleRate;
 }
 
-void *hv_getUserData(Heavy *c) {
-  return ctx_getUserData(Base(c));
+HV_EXPORT hv_uint32_t hv_getCurrentSample(HvBase *c) {
+  return c->blockStartTimestamp;
 }
 
-void hv_setUserData(Heavy *c, void *userData) {
-  ctx_setUserData(Base(c), userData);
+HV_EXPORT void *hv_getUserData(HvBase *c) {
+  return ctx_getUserData(c);
 }
 
-void hv_setBasePath(Heavy *c, const char *basePath) {
-  ctx_setBasePath(Base(c), basePath);
+HV_EXPORT void hv_setUserData(HvBase *c, void *userData) {
+  ctx_setUserData(c, userData);
 }
+
+HV_EXPORT void hv_setBasePath(HvBase *c, const char *basePath) {
+  ctx_setBasePath(c, basePath);
+}
+#ifdef __cplusplus
+}
+#endif

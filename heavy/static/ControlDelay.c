@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,7 @@
 
 hv_size_t cDelay_init(HvBase *_c, ControlDelay *o, float delayMs) {
   o->delay = ctx_millisecondsToSamples(_c, delayMs);
-  hv_memset(o->msgs, __HV_DELAY_MAX_MESSAGES*sizeof(HvMessage *));
+  hv_memclear(o->msgs, __HV_DELAY_MAX_MESSAGES*sizeof(HvMessage *));
   return 0;
 }
 
@@ -38,7 +38,7 @@ void cDelay_onMessage(HvBase *_c, ControlDelay *o, int letIn, const HvMessage *c
             // to this object in the same step
           }
         }
-        hv_memset(o->msgs, __HV_DELAY_MAX_MESSAGES*sizeof(HvMessage *));
+        hv_memclear(o->msgs, __HV_DELAY_MAX_MESSAGES*sizeof(HvMessage *));
       } else if (msg_compareSymbol(m, 0, "clear")) {
         // cancel (clear) all (pending) messages
         for (int i = 0; i < __HV_DELAY_MAX_MESSAGES; i++) {
@@ -47,7 +47,7 @@ void cDelay_onMessage(HvBase *_c, ControlDelay *o, int letIn, const HvMessage *c
             ctx_cancelMessage(_c, n, sendMessage);
           }
         }
-        hv_memset(o->msgs, __HV_DELAY_MAX_MESSAGES*sizeof(HvMessage *));
+        hv_memclear(o->msgs, __HV_DELAY_MAX_MESSAGES*sizeof(HvMessage *));
       } else {
         hv_uint32_t ts = msg_getTimestamp(m);
         msg_setTimestamp((HvMessage *) m, ts+o->delay); // update the timestamp to set the delay

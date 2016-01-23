@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -262,74 +262,3 @@ char *msg_toString(const HvMessage *m) {
   finalString[size-1] = '\0'; // ensure that the string is null terminated
   return finalString;
 }
-
-/*
- * TODO(mhroth): unnecessary for now
-bool msg_resolveDollarArguments(HvMessage *m, HvMessage *n, int z, char *buf, hv_size_t len, const char *args, ...) {
-  va_list ap;
-  va_start(ap, args);
-
-  hv_memset(buf, 0, len); // clear the buffer
-  hv_size_t j = 0; // position in buffer
-  const hv_size_t numArgs = hv_strlen(args); // the number of arguments
-
-  // if there is only one argument then the result has the chance of being a number, otherwise no
-  bool isNumber = (numArgs == 1);
-
-  for (hv_size_t i = 0; i < numArgs; ++i) {
-    switch (args[i]) {
-      case 'i': { // a message index
-        const int index = (int) va_arg(ap, int);
-        if (index < 0) {
-          // $0 always resolve to "0"
-          const hv_size_t x = 1;
-          if (x < len-j) { // always < in order to allow for trailing \0
-            j += snprintf(buf+j, len-j, "0");
-          }
-        } else {
-          switch (msg_getType(m, index)) {
-            default:
-            case HV_MSG_BANG: break; // this case should never happen
-            case HV_MSG_FLOAT: {
-              const hv_size_t x = snprintf(NULL, 0, "%g", msg_getFloat(m,index));
-              if (x < len-j) { // ensure that the buffer is big enough
-                j += snprintf(buf+j, len-j, "%g", msg_getFloat(m,index));
-              }
-              break;
-            }
-            case HV_MSG_SYMBOL: {
-              const hv_size_t x = snprintf(NULL, 0, "%s", msg_getSymbol(m,index));
-              if (x < len-j) {
-                j += snprintf(buf+j, len-j, "%s", msg_getSymbol(m,index));
-                isNumber = false;
-              }
-              break;
-            }
-          }
-        }
-        break;
-      }
-      case 's': { // a string
-        const char *s = (char *) va_arg(ap, char *);
-        const hv_size_t x = snprintf(NULL, 0, "%s", s);
-        if (x <= len-j) {
-          j += snprintf(buf+j, len-j, "%s", s);
-          isNumber = false;
-        }
-        break;
-      }
-      default: break;
-    }
-  }
-
-  if (isNumber) {
-    msg_setFloat(n,z,(float) atof(buf));
-  } else {
-    msg_setSymbol(n,z,buf);
-  }
-
-  va_end(ap);
-
-  return !isNumber;
-}
-*/

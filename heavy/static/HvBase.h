@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,7 +18,6 @@
 #define _HEAVY_BASE_H_
 
 #include "MessageQueue.h"
-#include "Utils.h"
 
 #define Base(_x) ((HvBase *) _x)
 
@@ -27,7 +26,7 @@ typedef struct HvBase {
   int numOutputChannels;
   double sampleRate;
   hv_uint32_t blockStartTimestamp;
-  unsigned int numBytes; // the total number of bytes allocated for this patch
+  hv_size_t numBytes; // the total number of bytes allocated for this patch
   void (*f_scheduleMessageForReceiver)(struct HvBase *const, const char *, HvMessage *);
   struct HvTable *(*f_getTableForHash)(struct HvBase *const, hv_uint32_t);
   MessageQueue mq;
@@ -119,7 +118,7 @@ static inline struct HvTable *ctx_getTableForName(HvBase *const _c, const char *
 }
 
 /** Returns the total number of bytes allocated for this patch. */
-static inline unsigned int ctx_getNumBytes(HvBase *_c) {
+static inline hv_size_t ctx_getNumBytes(HvBase *_c) {
   return _c->numBytes;
 }
 

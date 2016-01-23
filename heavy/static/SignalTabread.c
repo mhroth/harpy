@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,7 +23,8 @@ hv_size_t sTabread_init(SignalTabread *o, HvTable *table, bool forceAlignedLoads
   return 0;
 }
 
-void sTabread_onMessage(HvBase *_c, SignalTabread *o, int letIn, const HvMessage *const m) {
+void sTabread_onMessage(HvBase *_c, SignalTabread *o, int letIn, const HvMessage *const m,
+    void (*sendMessage)(HvBase *, int, const HvMessage *)) {
   switch (letIn) {
     case 0: {
       if (o->table != NULL) {
@@ -33,9 +34,14 @@ void sTabread_onMessage(HvBase *_c, SignalTabread *o, int letIn, const HvMessage
             hv_uint32_t h = (hv_uint32_t) hv_abs_f(msg_getFloat(m,0));
             if (msg_getFloat(m,0) < 0.0f) {
               // if input is negative, wrap around the end of the table
-              h = (hv_uint32_t) hTable_getSize(o->table) - h;
+              h = hTable_getSize(o->table) - h;
             }
-            o->head = o->forceAlignedLoads ? h & ~HV_N_SIMD_MASK : h;
+            o->head = o->forceAlignedLoads ? (h & ~HV_N_SIMD_MASK) : h;
+
+            // output new head
+            HvMessage *n = HV_MESSAGE_ON_STACK(1);
+            msg_initWithFloat(n, msg_getTimestamp(m), (float) o->head);
+            sendMessage(_c, 1, n);
             break;
           }
           default: break;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -89,19 +89,39 @@ static inline void __hv_tabwrite_stoppable_f(SignalTabwrite *o, hv_bInf_t bIn) {
 static inline void __hv_tabwrite_if(SignalTabwrite *o, hv_bIni_t bIn0, hv_bInf_t bIn1) {
   float *const b = hTable_getBuffer(o->table);
 #if HV_SIMD_AVX
-  b[bIn0[0]] = bIn1[0];
-  b[bIn0[1]] = bIn1[1];
-  b[bIn0[2]] = bIn1[2];
-  b[bIn0[3]] = bIn1[3];
-  b[bIn0[4]] = bIn1[4];
-  b[bIn0[5]] = bIn1[5];
-  b[bIn0[6]] = bIn1[6];
-  b[bIn0[7]] = bIn1[7];
+  const hv_int32_t *const i = (hv_int32_t *) &bIn0;
+  const float *const f = (float *) &bIn1;
+
+  hv_assert(i[0] >= 0 && i[0] < hTable_getAllocated(o->table));
+  hv_assert(i[1] >= 0 && i[1] < hTable_getAllocated(o->table));
+  hv_assert(i[2] >= 0 && i[2] < hTable_getAllocated(o->table));
+  hv_assert(i[3] >= 0 && i[3] < hTable_getAllocated(o->table));
+  hv_assert(i[4] >= 0 && i[4] < hTable_getAllocated(o->table));
+  hv_assert(i[5] >= 0 && i[5] < hTable_getAllocated(o->table));
+  hv_assert(i[6] >= 0 && i[6] < hTable_getAllocated(o->table));
+  hv_assert(i[7] >= 0 && i[7] < hTable_getAllocated(o->table));
+
+  b[i[0]] = f[0];
+  b[i[1]] = f[1];
+  b[i[2]] = f[2];
+  b[i[3]] = f[3];
+  b[i[4]] = f[4];
+  b[i[5]] = f[5];
+  b[i[6]] = f[6];
+  b[i[7]] = f[7];
 #elif HV_SIMD_SSE
-  b[bIn0[0]] = bIn1[0];
-  b[bIn0[1]] = bIn1[1];
-  b[bIn0[2]] = bIn1[2];
-  b[bIn0[3]] = bIn1[3];
+  const hv_int32_t *const i = (hv_int32_t *) &bIn0;
+  const float *const f = (float *) &bIn1;
+
+  hv_assert(i[0] >= 0 && i[0] < hTable_getAllocated(o->table));
+  hv_assert(i[1] >= 0 && i[1] < hTable_getAllocated(o->table));
+  hv_assert(i[2] >= 0 && i[2] < hTable_getAllocated(o->table));
+  hv_assert(i[3] >= 0 && i[3] < hTable_getAllocated(o->table));
+
+  b[i[0]] = f[0];
+  b[i[1]] = f[1];
+  b[i[2]] = f[2];
+  b[i[3]] = f[3];
 #elif HV_SIMD_NEON
   hv_assert((vgetq_lane_s32(bIn0,0) >= 0) && (vgetq_lane_s32(bIn0,0) < hTable_getSize(o->table)));
   hv_assert((vgetq_lane_s32(bIn0,1) >= 0) && (vgetq_lane_s32(bIn0,1) < hTable_getSize(o->table)));

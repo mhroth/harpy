@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,14 +31,14 @@ void cSystem_onMessage(HvBase *_c, void *o, int letIn, const HvMessage *const m,
     msg_initWithFloat(n, msg_getTimestamp(m), (float) msg_getTimestamp(m));
   } else if (msg_compareSymbol(m, 0, "table")) {
     // NOTE(mhroth): no need to check message format for symbols as table lookup will fail otherwise
-    HvTable *o = ctx_getTableForHash(_c, msg_getHash(m,1));
-    if (o != NULL) {
+    HvTable *table = ctx_getTableForHash(_c, msg_getHash(m,1));
+    if (table != NULL) {
       if (msg_compareSymbol(m, 2, "length")) {
-        msg_initWithFloat(n, msg_getTimestamp(m), (float) hTable_getLength(o));
+        msg_initWithFloat(n, msg_getTimestamp(m), (float) hTable_getLength(table));
       } else if (msg_compareSymbol(m, 2, "size")) {
-        msg_initWithFloat(n, msg_getTimestamp(m), (float) hTable_getSize(o));
+        msg_initWithFloat(n, msg_getTimestamp(m), (float) hTable_getSize(table));
       } else if (msg_compareSymbol(m, 2, "head")) {
-        msg_initWithFloat(n, msg_getTimestamp(m), (float) hTable_getHead(o));
+        msg_initWithFloat(n, msg_getTimestamp(m), (float) hTable_getHead(table));
       } else return;
     } else return;
   } else return;

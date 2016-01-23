@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,6 +14,8 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "HvBase.h"
+#include "HvMessage.h"
 #include "HvTable.h"
 
 hv_size_t hTable_init(HvTable *o, int length) {
@@ -25,7 +27,7 @@ hv_size_t hTable_init(HvTable *o, int length) {
   o->head = 0;
   hv_size_t numBytes = o->allocated * sizeof(float);
   o->buffer = (float *) hv_malloc(numBytes);
-  hv_memset(o->buffer, numBytes);
+  hv_memclear(o->buffer, numBytes);
   return numBytes;
 }
 
@@ -36,7 +38,7 @@ hv_size_t hTable_initWithData(HvTable *o, int length, const float *const data) {
   o->head = 0;
   hv_size_t numBytes = o->size * sizeof(float);
   o->buffer = (float *) hv_malloc(numBytes);
-  hv_memset(o->buffer, numBytes);
+  hv_memclear(o->buffer, numBytes);
   hv_memcpy(o->buffer, data, length*sizeof(float));
   return numBytes;
 }
@@ -63,7 +65,7 @@ int hTable_resize(HvTable *o, hv_uint32_t newLength) {
   const hv_uint32_t newBytes = (hv_uint32_t) (newAllocated * sizeof(float));
   float *b = (float *) hv_realloc(o->buffer, newBytes);
   hv_assert(b != NULL); // error while reallocing!
-  if (newSize > o->size) hv_clear_buffer(b+o->size, newAllocated-o->size); // clear new parts of the buffer
+  if (newSize > o->size) hv_memclear(b+o->size, (newAllocated-o->size)*sizeof(float)); // clear new parts of the buffer
   if (b != o->buffer) {
     // the buffer has been reallocated, ensure that it is on a 32-byte boundary
     if ((((uintptr_t) (const void *) b) & 0x10) == 0) {
@@ -71,7 +73,7 @@ int hTable_resize(HvTable *o, hv_uint32_t newLength) {
     } else {
       float *c = (float *) hv_malloc(newBytes);
       hv_assert(c != NULL);
-      hv_clear_buffer(c, newLength);
+      hv_memclear(c, newLength*sizeof(float));
       const hv_size_t min = hv_min_ui(o->size, newLength);
       hv_memcpy(c, b, min * sizeof(float));
       hv_free(b);

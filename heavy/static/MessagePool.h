@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,9 +17,7 @@
 #ifndef _MESSAGE_POOL_H_
 #define _MESSAGE_POOL_H_
 
-#include "Utils.h"
-
-struct HvMessage;
+#include "HvUtils.h"
 
 #define MP_NUM_MESSAGE_LISTS 4
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -20,7 +20,7 @@
 
 #if HV_SIMD_AVX
 static void sPhasor_updatePhase(SignalPhasor *o, float p) {
-  o->phase = _mm256_set_ps(p+1.0f); // o->phase is in range [1,2]
+  o->phase = _mm256_set1_ps(p+1.0f); // o->phase is in range [1,2]
 #elif HV_SIMD_SSE
   static void sPhasor_updatePhase(SignalPhasor *o, hv_uint32_t p) {
     o->phase = _mm_set1_epi32(p);
@@ -65,7 +65,8 @@ static void sPhasor_k_updateFrequency(SignalPhasor *o, float f, double r) {
 #elif HV_SIMD_SSE
   o->step.s = (hv_int32_t) (f*(HV_PHASOR_2_32/r));
   o->inc = _mm_set1_epi32(4*o->step.s);
-  sPhasor_k_updatePhase(o, (hv_uint32_t) (o->phase[0] & 0xFFFFFFFFL));
+  const int *const p = (int *) &o->phase;
+  sPhasor_k_updatePhase(o, (hv_uint32_t) p[0]);
 #elif HV_SIMD_NEON
   o->step.s = (hv_int32_t) (f*(HV_PHASOR_2_32/r));
   o->inc = vdupq_n_s32(4*o->step.s);

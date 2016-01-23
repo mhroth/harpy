@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,7 @@
 
 #include "HvBase.h"
 #include "SignalDel1.h"
-#include "HeavyMath.h"
+#include "HvMath.h"
 
 // implements y[n] = x[n] - a*y[n-1]
 // H(z) = 1/(1+a*z^-1)

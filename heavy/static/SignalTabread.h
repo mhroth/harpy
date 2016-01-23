@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -38,35 +38,27 @@ hv_size_t sTabread_init(SignalTabread *o, HvTable *table, bool forceAlignedLoads
 static inline void __hv_tabread_if(SignalTabread *o, hv_bIni_t bIn, hv_bOutf_t bOut) {
   const float *const b = hTable_getBuffer(o->table);
 #if HV_SIMD_AVX
-  hv_assert((int) (bIn[0] & 0xFFFFFFFFL) >= 0 && (int) (bIn[0] & 0xFFFFFFFFL) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[0] >> 32) >= 0 && (int) ((bIn[0] & ~0xFFFFFFFFL) >> 32) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[1] & 0xFFFFFFFFL) >= 0 && (int) (bIn[1] & 0xFFFFFFFFL) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[1] >> 32) >= 0 && (int) ((bIn[1] & ~0xFFFFFFFFL) >> 32) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[2] & 0xFFFFFFFFL) >= 0 && (int) (bIn[2] & 0xFFFFFFFFL) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[2] >> 32) >= 0 && (int) ((bIn[2] & ~0xFFFFFFFFL) >> 32) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[3] & 0xFFFFFFFFL) >= 0 && (int) (bIn[3] & 0xFFFFFFFFL) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[3] >> 32) >= 0 && (int) ((bIn[3] & ~0xFFFFFFFFL) >> 32) < hTable_getAllocated(o->table));
+  const hv_int32_t *const i = (hv_int32_t *) &bIn;
 
-  *bOut = _mm256_set_ps(
-      b[(int) (bIn[3] >> 32)],
-      b[(int) (bIn[3] & 0xFFFFFFFFL)],
-      b[(int) (bIn[2] >> 32)],
-      b[(int) (bIn[2] & 0xFFFFFFFFL)],
-      b[(int) (bIn[1] >> 32)],
-      b[(int) (bIn[1] & 0xFFFFFFFFL)],
-      b[(int) (bIn[0] >> 32)],
-      b[(int) (bIn[0] & 0xFFFFFFFFL)]);
+  hv_assert(i[0] >= 0 && i[0] < hTable_getAllocated(o->table));
+  hv_assert(i[1] >= 0 && i[1] < hTable_getAllocated(o->table));
+  hv_assert(i[2] >= 0 && i[2] < hTable_getAllocated(o->table));
+  hv_assert(i[3] >= 0 && i[3] < hTable_getAllocated(o->table));
+  hv_assert(i[4] >= 0 && i[4] < hTable_getAllocated(o->table));
+  hv_assert(i[5] >= 0 && i[5] < hTable_getAllocated(o->table));
+  hv_assert(i[6] >= 0 && i[6] < hTable_getAllocated(o->table));
+  hv_assert(i[7] >= 0 && i[7] < hTable_getAllocated(o->table));
+
+  *bOut = _mm_set_ps(b[i[7]], b[i[6]], b[i[5]], b[i[4]], b[i[3]], b[i[2]], b[i[1]], b[i[0]]);
 #elif HV_SIMD_SSE
-  hv_assert((int) (bIn[0] & 0xFFFFFFFFL) >= 0 && (int) (bIn[0] & 0xFFFFFFFFL) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[0] >> 32) >= 0 && (int) (bIn[0] >> 32) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[1] & 0xFFFFFFFFL) >= 0 && (int) (bIn[1] & 0xFFFFFFFFL) < hTable_getAllocated(o->table));
-  hv_assert((int) (bIn[1] >> 32) >= 0 && (int) (bIn[1] >> 32) < hTable_getAllocated(o->table));
+  const hv_int32_t *const i = (hv_int32_t *) &bIn;
 
-  *bOut = _mm_set_ps(
-      b[(int) (bIn[1] >> 32)],
-      b[(int) (bIn[1] & 0xFFFFFFFFL)],
-      b[(int) (bIn[0] >> 32)],
-      b[(int) (bIn[0] & 0xFFFFFFFFL)]);
+  hv_assert(i[0] >= 0 && i[0] < hTable_getAllocated(o->table));
+  hv_assert(i[1] >= 0 && i[1] < hTable_getAllocated(o->table));
+  hv_assert(i[2] >= 0 && i[2] < hTable_getAllocated(o->table));
+  hv_assert(i[3] >= 0 && i[3] < hTable_getAllocated(o->table));
+
+  *bOut = _mm_set_ps(b[i[3]], b[i[2]], b[i[1]], b[i[0]]);
 #elif HV_SIMD_NEON
   hv_assert((bIn[0] >= 0) && (bIn[0] < hTable_getAllocated(o->table)));
   hv_assert((bIn[1] >= 0) && (bIn[1] < hTable_getAllocated(o->table)));
@@ -152,7 +144,8 @@ static inline void __hv_tabread_stoppable_f(SignalTabread *o, hv_bOutf_t bOut) {
 #endif
 }
 
-void sTabread_onMessage(HvBase *_c, SignalTabread *o, int letIn, const HvMessage *const m);
+void sTabread_onMessage(HvBase *_c, SignalTabread *o, int letIn, const HvMessage *const m,
+    void (*sendMessage)(HvBase *, int, const HvMessage *));
 
 
 

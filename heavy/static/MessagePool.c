@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,7 +16,6 @@
 
 #include "MessagePool.h"
 #include "HvMessage.h"
-#include "Utils.h"
 
 // the number of bytes reserved at a time from the pool
 #define MP_BLOCK_SIZE_BYTES 512
@@ -107,7 +106,7 @@ void mp_freeMessage(MessagePool *mp, HvMessage *m) {
   const hv_size_t i = mp_messagelistIndexForSize(b); // the MessagePoolList index in the pool
   MessagePoolList *ml = &mp->lists[i];
   const hv_size_t chunkSize = 32 << i;
-  hv_memset(m, chunkSize); // clear the chunk, just in case
+  hv_memclear(m, chunkSize); // clear the chunk, just in case
   ml_push(ml, m);
 }
 
@@ -130,8 +129,8 @@ HvMessage *mp_addMessage(MessagePool *mp, const HvMessage *m) {
     const hv_size_t newIndex = mp->bufferIndex + MP_BLOCK_SIZE_BYTES;
     hv_assert(newIndex <= mp->bufferSize); // have we have exceeded the buffer size?
 
-    for (hv_size_t i = mp->bufferIndex; i < newIndex; i += chunkSize) {
-      ml_push(ml, mp->buffer + i); // push new nodes onto the list with chunk pointers
+    for (hv_size_t j = mp->bufferIndex; j < newIndex; j += chunkSize) {
+      ml_push(ml, mp->buffer + j); // push new nodes onto the list with chunk pointers
     }
     mp->bufferIndex = newIndex;
     char *buf = ml_pop(ml);

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, Enzien Audio Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio Ltd.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,7 @@
 #ifndef _HEAVY_MATH_H_
 #define _HEAVY_MATH_H_
 
-#include "Utils.h"
+#include "HvUtils.h"
 
 // https://software.intel.com/sites/landingpage/IntrinsicsGuide/
 // https://gcc.gnu.org/onlinedocs/gcc-4.8.1/gcc/ARM-NEON-Intrinsics.html
@@ -633,8 +633,6 @@ static inline void __hv_fma_f(hv_bInf_t bIn0, hv_bInf_t bIn1, hv_bInf_t bIn2, hv
   *bOut = vfmaq_f32(bIn2, bIn0, bIn1);
 #else
   // NOTE(mhroth): it turns out, fma SUUUUCKS on lesser ARM architectures
-  // But in fact ideally fma would be disabled in ir2c for ARM architectures.
-  // LLVM does a much better job handling fma than we do.
   *bOut = vaddq_f32(vmulq_f32(bIn0, bIn1), bIn2);
 #endif
 #else // HV_SIMD_NONE
