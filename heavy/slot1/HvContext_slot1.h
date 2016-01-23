@@ -1,6 +1,5 @@
-
 /**
- * Copyright (c) 2014,2015 Enzien Audio, Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio, Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"),
@@ -36,10 +35,10 @@
 #include "ControlCast.h"
 #include "ControlSlice.h"
 #include "SignalLine.h"
-#include "HeavyMath.h"
 #include "ControlBinop.h"
 #include "ControlVar.h"
 #include "ControlDelay.h"
+#include "HvMath.h"
 #include "SignalPhasor.h"
 #include "ControlPack.h"
 
@@ -47,31 +46,31 @@ typedef struct Hv_slot1 {
   HvBase base;
 
   // objects
-  SignalPhasor sPhasor_Gs1GI;
-  SignalLine sLine_vHi7m;
-  SignalVarf sVarf_9eDxl;
-  SignalPhasor sPhasor_6kFDB;
-  SignalVarf sVarf_bKNZg;
-  SignalVarf sVarf_5QeE6;
-  SignalPhasor sPhasor_fbdId;
-  SignalVarf sVarf_O33ga;
-  ControlBinop cBinop_PXK5I;
-  ControlVar cVar_bpe3k;
-  ControlVar cVar_GUnko;
-  ControlVar cVar_6QKM5;
-  ControlVar cVar_blf0i;
-  ControlDelay cDelay_MbsR2;
-  ControlPack cPack_BExUd;
-  ControlBinop cBinop_YKLJB;
-  ControlBinop cBinop_b5YnN;
-  ControlBinop cBinop_ALjJc;
-  ControlBinop cBinop_cT4rk;
-  ControlBinop cBinop_AeJlV;
-  ControlSlice cSlice_VAx35;
-  ControlSlice cSlice_rByiO;
-  ControlSlice cSlice_Cy6Sr;
-  ControlSlice cSlice_5lwBN;
-  ControlSlice cSlice_h12g4;
+  SignalPhasor sPhasor_JfQn8;
+  SignalLine sLine_O0Rar;
+  SignalVarf sVarf_rn0b3;
+  SignalPhasor sPhasor_2Bnwz;
+  SignalVarf sVarf_PcvAb;
+  SignalVarf sVarf_d9lws;
+  SignalPhasor sPhasor_qLhCd;
+  SignalVarf sVarf_8lkZJ;
+  ControlBinop cBinop_UtxaQ;
+  ControlBinop cBinop_ZsvrY;
+  ControlBinop cBinop_oDPKC;
+  ControlBinop cBinop_YGxGe;
+  ControlBinop cBinop_DmYox;
+  ControlPack cPack_kgGkd;
+  ControlDelay cDelay_x5wiJ;
+  ControlVar cVar_qdGBS;
+  ControlVar cVar_U8GVl;
+  ControlVar cVar_3yBKP;
+  ControlVar cVar_XpCxS;
+  ControlSlice cSlice_P4mZO;
+  ControlSlice cSlice_Q8b3A;
+  ControlSlice cSlice_VNrLN;
+  ControlSlice cSlice_BOmQ1;
+  ControlSlice cSlice_c7DqY;
+  ControlBinop cBinop_loirp;
 } Hv_slot1;
 
 #endif // _HEAVYCONTEXT_SLOT1_H_

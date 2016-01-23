@@ -1,6 +1,5 @@
-
 /**
- * Copyright (c) 2014,2015 Enzien Audio, Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio, Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"),
@@ -36,21 +35,21 @@
 #include "ControlCast.h"
 #include "ControlSlice.h"
 #include "SignalLine.h"
-#include "HeavyMath.h"
+#include "HvMath.h"
 #include "SignalPhasor.h"
 
 typedef struct Hv_slot0 {
   HvBase base;
 
   // objects
-  SignalLine sLine_kjOoY;
-  SignalPhasor sPhasor_QAHuu;
-  SignalLine sLine_NHqAT;
-  ControlSlice cSlice_6ibo4;
-  ControlSlice cSlice_q6fJz;
-  ControlSlice cSlice_dacr0;
-  ControlSlice cSlice_GYD2b;
-  ControlSlice cSlice_zxvkU;
+  SignalLine sLine_l1tZU;
+  SignalPhasor sPhasor_o7ys3;
+  SignalLine sLine_VHntj;
+  ControlSlice cSlice_v9LOk;
+  ControlSlice cSlice_hFC8p;
+  ControlSlice cSlice_o15nO;
+  ControlSlice cSlice_hHzEo;
+  ControlSlice cSlice_47CeF;
 } Hv_slot0;
 
 #endif // _HEAVYCONTEXT_SLOT0_H_

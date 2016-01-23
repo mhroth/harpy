@@ -1,6 +1,5 @@
-
 /**
- * Copyright (c) 2014,2015 Enzien Audio, Ltd.
+ * Copyright (c) 2014,2015,2016 Enzien Audio, Ltd.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"),
@@ -33,16 +32,16 @@
 
 // object includes
 #include "SignalVar.h"
-#include "HeavyMath.h"
+#include "HvMath.h"
 
 typedef struct Hv_mixer {
   HvBase base;
 
   // objects
-  SignalVarf sVarf_kQrHR;
-  SignalVarf sVarf_tPOAl;
-  SignalVarf sVarf_E90u5;
-  SignalVarf sVarf_QgRAL;
+  SignalVarf sVarf_KrQSd;
+  SignalVarf sVarf_kOnKw;
+  SignalVarf sVarf_6Oqkf;
+  SignalVarf sVarf_1Mc26;
 } Hv_mixer;
 
 #endif // _HEAVYCONTEXT_MIXER_H_
